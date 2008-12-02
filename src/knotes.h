@@ -47,13 +47,21 @@ SOFTWARE IS DISCLAIMED.
 
 typedef QString KNoteID_t;
 
-#include "osyncbase.h"
 #include "datasource.h"
 
 /** KNotes access implementation interface
  */
 class KNotesDataSource : public OSyncDataSource
 {
+  public:
+		KNotesDataSource() : OSyncDataSource("note") {};
+		virtual ~KNotesDataSource() {};
+
+		virtual void connect(OSyncPluginInfo *info, OSyncContext *ctx);
+		virtual void disconnect(OSyncPluginInfo *info, OSyncContext *ctx);
+		virtual void get_changes(OSyncPluginInfo *info, OSyncContext *ctx);
+		virtual void commit(OSyncPluginInfo *info, OSyncContext *ctx, OSyncChange *chg);
+
 	private:
 		DCOPClient *kn_dcop;
 		KNotesIface_stub *kn_iface;
@@ -62,14 +70,4 @@ class KNotesDataSource : public OSyncDataSource
 		bool knotesWasRunning;
 
 		bool saveNotes(OSyncContext *ctx);
-	
-public:
-		KNotesDataSource() : OSyncDataSource("note") {};
-		virtual ~KNotesDataSource() {};
-
-		bool initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncError **error);
-		virtual void connect(OSyncPluginInfo *info, OSyncContext *ctx);
-		virtual void disconnect(OSyncPluginInfo *info, OSyncContext *ctx);
-		virtual void get_changes(OSyncPluginInfo *info, OSyncContext *ctx);
-		virtual void commit(OSyncPluginInfo *info, OSyncContext *ctx, OSyncChange *chg);
 };

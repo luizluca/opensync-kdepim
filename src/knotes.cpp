@@ -33,20 +33,8 @@ SOFTWARE IS DISCLAIMED.
 /*An adapted C++ implementation of RSA Data Securities MD5 algorithm.*/
 #include <kmdcodec.h>
 
-bool KNotesDataSource::initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncError **error)
-{
-	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, plugin, info);
-
-	if (!OSyncDataSource::initialize(plugin, info, error)) {
-		osync_trace(TRACE_EXIT_ERROR, "%s", __PRETTY_FUNCTION__);
-		return false;
-	}
-
-	osync_objtype_sink_add_objformat(sink, "xmlformat-note");
-
-	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
-	return true;
-}
+#include <opensync/xmlformat/opensync_xmlformat.h>
+#include <opensync/xmlformat/opensync_xmlfield.h>
 
 void KNotesDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
 {
@@ -141,6 +129,7 @@ static QString strip_html(QString input)
 
 void KNotesDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
 {
+#if 0
 	osync_trace(TRACE_ENTRY, "%s(%p)", __func__, ctx);
 	QMap <KNoteID_t,QString> fNotes;
 	//set Digest to rawResult
@@ -252,10 +241,12 @@ error:
 	osync_context_report_osyncerror(ctx, error);
 	osync_trace(TRACE_EXIT_ERROR, "%s: %s", __func__, osync_error_print(&error));
 	osync_error_unref(&error);
+#endif
 }
 
 void KNotesDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChange *chg)
 {
+#if 0
 	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __func__, ctx, chg);
 	OSyncChangeType type = osync_change_get_changetype(chg);
 
@@ -359,4 +350,5 @@ void KNotesDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChange 
 	osync_hashtable_update_change(hashtable, chg);
 	osync_context_report_success(ctx);
 	osync_trace(TRACE_EXIT, "%s", __func__);
+#endif
 }

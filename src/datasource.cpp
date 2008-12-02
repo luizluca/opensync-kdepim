@@ -4,8 +4,8 @@
 
 #include <stdlib.h>
 #include <kapplication.h>
+#include <qfile.h>
 
-#include "osyncbase.h"
 #include "datasource.h"
 
 extern "C"
@@ -58,36 +58,30 @@ static void sync_done_wrapper(void *userdata, OSyncPluginInfo *info, OSyncContex
 
 } // extern "C"
 
-/* Warning: this struct initialisation depends on the order of the fields in 
- * OSyncObjTypeSinkFunctions, but C++ doesn't allow C99-style named structure
- * initialisation, and I can't figure out any other way to do it */
-static OSyncObjTypeSinkFunctions wrapper_functions = {
-	connect_wrapper,
-	disconnect_wrapper,
-	get_changes_wrapper,
-	commit_wrapper,
-	NULL, // write
-	NULL, // committed_all
-	NULL, // read
-	NULL, // batch_commit
-	sync_done_wrapper};
-
 bool OSyncDataSource::initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncError **error)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, plugin, info);
 	
-	sink = osync_objtype_sink_new(objtype, error);
+        OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, objtype);
+
 	if (sink == NULL) {
 		osync_trace(TRACE_EXIT_ERROR, "%s: %s", __PRETTY_FUNCTION__, osync_error_print(error));
 		return false;
 	}
 
-	osync_objtype_sink_set_functions(sink, wrapper_functions, this);
-	osync_plugin_info_add_objtype(info, sink);
+	OSyncObjTypeSinkFunctions functions;
+	memset(&functions, 0, sizeof(functions));
+	functions.connect     = connect_wrapper;
+	functions.disconnect  = disconnect_wrapper;
+	functions.get_changes = get_changes_wrapper;
+	functions.commit      = commit_wrapper;
+	functions.sync_done   = sync_done_wrapper;
+
+	osync_objtype_sink_set_functions(sink, functions, this);
 
 	const char *configdir = osync_plugin_info_get_configdir(info);
 	QString tablepath = QString("%1/%2-hash.db").arg(configdir, objtype);
-	hashtable = osync_hashtable_new(tablepath, osync_objtype_sink_get_name(sink), error);
+	hashtable = osync_hashtable_new(QFile::encodeName(tablepath), osync_objtype_sink_get_name(sink), error);
 	if (hashtable == NULL) {
 		osync_trace(TRACE_EXIT_ERROR, "%s: %s", __PRETTY_FUNCTION__, osync_error_print(error));
 		return false;
@@ -105,6 +99,7 @@ void OSyncDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
 	QString anchorpath = QString("%1/anchor.db").arg(osync_plugin_info_get_configdir(info));
 	if (!osync_anchor_compare(anchorpath, objtype, "true")) {
 		osync_trace(TRACE_INTERNAL, "Setting slow-sync for %s", objtype);
+		OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, objtype);
 		osync_objtype_sink_set_slowsync(sink, TRUE);
 	}
 	osync_context_report_success(ctx);
@@ -126,6 +121,7 @@ void OSyncDataSource::sync_done(OSyncPluginInfo *info, OSyncContext *ctx)
 
 bool OSyncDataSource::report_change(OSyncPluginInfo *info, OSyncContext *ctx, QString uid, QString data, QString hash, OSyncObjFormat *objformat)
 {
+                OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, objtype);
 	OSyncError *error = NULL;
 	OSyncChangeType changetype;
 	OSyncData *odata;
@@ -183,10 +179,10 @@ bool OSyncDataSource::report_deleted(OSyncPluginInfo *info, OSyncContext *ctx, O
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __PRETTY_FUNCTION__, info, ctx, objformat);
 	
-	int i;
 	OSyncError *error = NULL;
 	OSyncList *u, *uids  = osync_hashtable_get_deleted(hashtable);
 	OSyncChange *change;
+                OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, objtype);
 	
 	for (u=uids; u; u = u->next) {
 		char *uid = (char *) u->data;
@@ -227,9 +223,16 @@ error:
 
 OSyncDataSource::~OSyncDataSource()
 {
-	if (sink)
-		osync_objtype_sink_unref(sink);
-
 	if (hashtable)
 		osync_hashtable_unref(hashtable);
+}
+
+bool OSyncDataSource::has_category(const QStringList &list) const
+{
+	if ( categories.isEmpty() ) return true;  // no filter defined -> match all
+
+	for (QStringList::const_iterator it = list.begin(); it != list.end(); ++it ) {
+		if ( categories.contains(*it) ) return true;
+	}
+	return false; // not found
 }

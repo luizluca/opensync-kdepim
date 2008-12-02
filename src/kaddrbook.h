@@ -23,28 +23,27 @@ SOFTWARE IS DISCLAIMED.
 #ifndef KADDRBOOK_H
 #define KADDRBOOK_H
 
-#include <kabc/stdaddressbook.h>
-#include <kabc/vcardconverter.h>
 #include <kabc/resource.h>
 
-#include "osyncbase.h"
 #include "datasource.h"
 
 class KContactDataSource : public OSyncDataSource
 {
-	private:
-		KABC::AddressBook* addressbookptr;
-		QString calc_hash(KABC::Addressee &e);
-
 	public:
-		KContactDataSource() : OSyncDataSource("contact") {};
+		KContactDataSource() : OSyncDataSource("contact"), addressbookptr(0), modified(false), ticket(0) {};
 		virtual ~KContactDataSource() {};
 
-		bool initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncError **error);
 		virtual void connect(OSyncPluginInfo *info, OSyncContext *ctx);
 		virtual void disconnect(OSyncPluginInfo *info, OSyncContext *ctx);
 		virtual void get_changes(OSyncPluginInfo *info, OSyncContext *ctx);
 		virtual void commit(OSyncPluginInfo *info, OSyncContext *ctx, OSyncChange *chg);
+
+	private:
+		QString calc_hash(KABC::Addressee &e);
+
+		KABC::AddressBook* addressbookptr;
+		bool modified;  // set when needed to save addressbook back
+		KABC::Ticket *ticket;
 };
 
 #endif

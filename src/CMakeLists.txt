@@ -4,30 +4,22 @@ INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_BINARY_DIR} ${OPENSYNC_INCLUDE_DIRS} ${KDE3
 # kdepim-sync sources
 SET( kdepim_sync_LIB_SRCS
 kdepim_sync.cpp
-)
-
-# kdepim-module sources
-SET( kdepim_module_LIB_SRCS
 datasource.cpp
 kaddrbook.cpp
 kcal.cpp
-kdepim_impl.cpp
 knotes.cpp
 )
 
 ADD_DEFINITIONS( -DKDEPIM_LIBDIR="${OPENSYNC_PLUGINDIR}" )
 
-KDE3_ADD_DCOP_STUBS( kdepim_module_LIB_SRCS KNotesIface.h )
+KDE3_ADD_DCOP_STUBS( kdepim_sync_LIB_SRCS KNotesIface.h )
 
 OPENSYNC_PLUGIN_ADD( kdepim-sync ${kdepim_sync_LIB_SRCS} )
-OPENSYNC_PLUGIN_ADD( kdepim_lib ${kdepim_module_LIB_SRCS} )
 
 TARGET_LINK_LIBRARIES( kdepim-sync ${OPENSYNC_LIBRARIES} ${KDE3_LIBRARIES} ${KDEPIM3_KABC_LIBRARIES} ${QT_LIBRARIES} ${KDEPIM3_KCAL_LIBRARIES} )
-TARGET_LINK_LIBRARIES( kdepim_lib ${OPENSYNC_LIBRARIES} ${KDE3_LIBRARIES} ${KDEPIM3_KABC_LIBRARIES} ${QT_LIBRARIES} ${KDEPIM3_KCAL_LIBRARIES} )
 
 # Install plugins
 OPENSYNC_PLUGIN_INSTALL( kdepim-sync )
-OPENSYNC_PLUGIN_INSTALL( kdepim_lib )
 
 # Install config template	
 OPENSYNC_PLUGIN_CONFIG( kdepim-sync )

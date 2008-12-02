@@ -1,2 +1,49 @@
-<config>
+<?xml version="1.0"?>
+<config version="1.0">
+  <Resources>
+    <Resource>
+      <Enabled>1</Enabled>
+      <Formats>
+        <Format>
+          <Config>VCARD_EXTENSION=KDE3</Config>
+          <Name>vcard30</Name>
+        </Format>
+      </Formats>
+      <Name>Contacts</Name>
+      <ObjType>contact</ObjType>
+    </Resource>
+
+    <Resource>
+      <Enabled>1</Enabled>
+      <Formats>
+        <Format>
+          <Name>vevent20</Name>
+        </Format>
+      </Formats>
+      <Name>Events</Name>
+      <ObjType>event</ObjType>
+    </Resource>
+
+    <Resource>
+      <Enabled>1</Enabled>
+      <Formats>
+        <Format>
+          <Name>vtodo20</Name>
+        </Format>
+      </Formats>
+      <Name>Todos</Name>
+      <ObjType>todo</ObjType>
+    </Resource>
+
+    <Resource>
+      <Enabled>1</Enabled>
+      <Formats>
+        <Format>
+          <Name>xmlformat-note</Name>
+        </Format>
+      </Formats>
+      <Name>Notes</Name>
+      <ObjType>note</ObjType>
+    </Resource>
+  </Resources>
 </config>

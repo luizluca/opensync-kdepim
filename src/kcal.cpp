@@ -232,36 +232,6 @@ bool KCalSharedResource::get_todo_changes(OSyncDataSource *dsobj, OSyncPluginInf
 	return true;
 }
 
-bool KCalEventDataSource::initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncError **error)
-{
-	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, plugin, info);
-
-	if (!OSyncDataSource::initialize(plugin, info, error)) {
-		osync_trace(TRACE_EXIT_ERROR, "%s", __PRETTY_FUNCTION__);
-		return false;
-	}
-
-	osync_objtype_sink_add_objformat(sink, "vevent20");
-
-	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
-	return true;
-}
-
-bool KCalTodoDataSource::initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncError **error)
-{
-	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, plugin, info);
-
-	if (!OSyncDataSource::initialize(plugin, info, error)) {
-		osync_trace(TRACE_EXIT_ERROR, "%s", __PRETTY_FUNCTION__);
-		return false;
-	}
-
-	osync_objtype_sink_add_objformat(sink, "vtodo20");
-
-	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
-	return true;
-}
-
 void KCalEventDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
 {
 	if (!kcal->open(ctx))

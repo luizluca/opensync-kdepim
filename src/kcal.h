@@ -30,17 +30,10 @@ SOFTWARE IS DISCLAIMED.
 #include <libkcal/calendarlocal.h>
 #include <kdeversion.h>
 
-#include "osyncbase.h"
 #include "datasource.h"
 
 class KCalSharedResource
 {
-	private:
-		KCal::CalendarResources *calendar;
-		int refcount;
-	
-		bool report_incidence(OSyncDataSource *dsobj, OSyncPluginInfo *info, OSyncContext *ctx, KCal::Incidence *e, OSyncObjFormat *objformat);
-	
 	public:
 		KCalSharedResource() {calendar = NULL; refcount = 0;};
 		bool open(OSyncContext *ctx);
@@ -48,36 +41,40 @@ class KCalSharedResource
 		bool get_event_changes(OSyncDataSource *dsobj, OSyncPluginInfo *info, OSyncContext *ctx);
 		bool get_todo_changes(OSyncDataSource *dsobj, OSyncPluginInfo *info, OSyncContext *ctx);
 		bool commit(OSyncContext *ctx, OSyncChange *chg);
+
+	private:
+		KCal::CalendarResources *calendar;
+		int refcount;
+	
+		bool report_incidence(OSyncDataSource *dsobj, OSyncPluginInfo *info, OSyncContext *ctx, KCal::Incidence *e, OSyncObjFormat *objformat);
 };
 
 class KCalEventDataSource : public OSyncDataSource
 {
-	private:
-		KCalSharedResource *kcal;
-	
 	public:
 		KCalEventDataSource(KCalSharedResource *kcal) : OSyncDataSource("event"), kcal(kcal) {};
 		virtual ~KCalEventDataSource() {};
 
-		bool initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncError **error);
 		virtual void connect(OSyncPluginInfo *info, OSyncContext *ctx);
 		virtual void disconnect(OSyncPluginInfo *info, OSyncContext *ctx);
 		virtual void get_changes(OSyncPluginInfo *info, OSyncContext *ctx);
 		virtual void commit(OSyncPluginInfo *info, OSyncContext *ctx, OSyncChange *chg);
+
+	private:
+		KCalSharedResource *kcal;
 };
 
 class KCalTodoDataSource : public OSyncDataSource
 {
-	private:
-		KCalSharedResource *kcal;
-	
 	public:
 		KCalTodoDataSource(KCalSharedResource *kcal) : OSyncDataSource("todo"), kcal(kcal) {};
 		virtual ~KCalTodoDataSource() {};
 
-		bool initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncError **error);
 		virtual void connect(OSyncPluginInfo *info, OSyncContext *ctx);
 		virtual void disconnect(OSyncPluginInfo *info, OSyncContext *ctx);
 		virtual void get_changes(OSyncPluginInfo *info, OSyncContext *ctx);
 		virtual void commit(OSyncPluginInfo *info, OSyncContext *ctx, OSyncChange *chg);
+
+	private:
+		KCalSharedResource *kcal;
 };

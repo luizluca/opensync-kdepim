@@ -22,57 +22,146 @@ SOFTWARE IS DISCLAIMED.
 /**
  * @autor Eduardo Pereira Habkost <ehabkost@conectiva.com.br>
  * edit Matthias Jahn <jahn.matthias@freenet.de>
+ * changed to 0.40 API by Martin Koller <m.koller@surfeu.at>
  */
 
-#include <dlfcn.h>
+#include <libkcal/resourcecalendar.h>
+//#include <kinstance.h>
+//#include <klocale.h>
+#include <kapplication.h>
+#include <kcmdlineargs.h>
+#include <kaboutdata.h>
+
+#include "kaddrbook.h"
+#include "kcal.h"
+#include "knotes.h"
+
 #include <string.h>
 
-#include "osyncbase.h"
+#include <opensync/opensync-plugin.h>
+
+class KdePluginImplementation
+{
+	public:
+		KdePluginImplementation() : application(0), newApplication(false)
+		{
+			KAboutData aboutData(
+			    "libopensync-kdepim-plugin",         // internal program name
+			    "OpenSync-KDE-plugin",               // displayable program name.
+			    "0.4",                               // version string
+			    "OpenSync KDEPIM plugin",            // short porgram description
+			    KAboutData::License_GPL,             // license type
+			    "(c) 2005, Eduardo Pereira Habkost, (c)" // copyright statement
+			    "(c) 2008, Martin Koller (c)",       // copyright statement
+			    0,                                   // any free form text
+			    "http://www.opensync.org",           // program home page address
+			    "http://www.opensync.org/newticket"  // bug report email address
+			);
+
+			KCmdLineArgs::init( &aboutData );
+			if ( kapp ) {
+				application = kapp;
+				newApplication = false;
+			} else {
+				application = new KApplication( true, true );
+				newApplication = true;
+			}
+
+			kaddrbook = new KContactDataSource();
+			kcal_event = new KCalEventDataSource(&kcal);
+			kcal_todo = new KCalTodoDataSource(&kcal);
+			knotes = new KNotesDataSource();
+		}
+
+		bool initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncError **error)
+		{
+			osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, plugin, info);
+
+			if (!kaddrbook->initialize(plugin, info, error))
+				goto error;
+
+			if (!kcal_event->initialize(plugin, info, error))
+				goto error;
+
+			if (!kcal_todo->initialize(plugin, info, error))
+				goto error;
+
+			if (!knotes->initialize(plugin, info, error))
+				goto error;
+
+      /*
+      // get the config
+      OSyncPluginConfig *config = osync_plugin_info_get_config(info);
+      if (!config) {
+        osync_error_set(error, OSYNC_ERROR_GENERIC, "Unable to get config.");
+        goto error;
+      }
+
+      // Process plugin specific advanced options 
+      OSyncList *optslist = osync_plugin_config_get_advancedoptions(config);
+      for (; optslist; optslist = optslist->next) {
+        OSyncPluginAdvancedOption *option = optslist->data;
+
+        const char *val = osync_plugin_advancedoption_get_value(option);
+        const char *name = osync_plugin_advancedoption_get_name(option);
+
+        if (!strcmp(name,"category")) {
+          }
+      }
+
+          */
+
+
+			osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
+			return true;
+
+		error:
+			osync_trace(TRACE_EXIT_ERROR, "%s: %s", __PRETTY_FUNCTION__, osync_error_print(error));
+			return false;
+		}
+
+		virtual ~KdePluginImplementation()
+		{
+			delete kaddrbook;
+			delete kcal_event;
+			delete kcal_todo;
+			delete knotes;
+
+			if ( newApplication ) {
+				delete application;
+				application = 0;
+			}
+		}
+	private:
+		KContactDataSource *kaddrbook;
+		KCalSharedResource kcal;
+		KCalEventDataSource *kcal_event;
+		KCalTodoDataSource *kcal_todo;
+		KNotesDataSource *knotes;
+
+		KApplication *application;
+		bool newApplication;
+};
 
 extern "C"
 {
 
-/** Load actual plugin implementation
+/** create actual plugin implementation
  *
- * Loads kdepim_lib.so and create a new KdePluginImplementation object,
- * that is linked against the KDE libraries, and implements the plugin
- * functions
- *
- * @see KdePluginImplementationBase
  */
 static void *
 kde_initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncError **error)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, plugin, info, error);
 
-	KdeImplInitFunc init_func;
-	KdePluginImplementationBase *impl_object;
-	void *module;
+        KdePluginImplementation *impl_object = new KdePluginImplementation;
 
-	module = dlopen(KDEPIM_LIBDIR"/kdepim_lib.so", RTLD_NOW);
-	if (!module) {
-		osync_error_set(error, OSYNC_ERROR_INITIALIZATION, "Can't load plugin implementation module from %s: %s",
-		                KDEPIM_LIBDIR"/kdepim_lib.so", dlerror());
-		goto error;
-	}
-	
-	init_func = (KdeImplInitFunc)dlsym(module, "new_KdePluginImplementation");
-	if (!init_func) {
-		osync_error_set(error, OSYNC_ERROR_INITIALIZATION, "Invalid plugin implementation module");
-		goto error;
-	}
-
-	impl_object = init_func(plugin, info, error);
-	if (!impl_object)
-		goto error;
+        if ( !impl_object->initialize(plugin, info, error) )
+          return 0;
 
 	/* Return the created object to the sync engine */
 	osync_trace(TRACE_EXIT, "%s: %p", __func__, impl_object);
-	return (void*)impl_object;
-
-error:
-	osync_trace(TRACE_EXIT_ERROR,  "%s: NULL", __func__);
-	return NULL;
+	return impl_object;
 }
 
 /* Here we actually tell opensync which sinks are available. For this plugin, we
@@ -93,7 +182,7 @@ static osync_bool kde_discover(void *userdata, OSyncPluginInfo *info, OSyncError
 static void kde_finalize(void *userdata)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p)", __func__, userdata);
-	KdePluginImplementationBase *impl_object = (KdePluginImplementationBase *)userdata;
+	KdePluginImplementation *impl_object = (KdePluginImplementation *)userdata;
 	delete impl_object;
 	osync_trace(TRACE_EXIT, "%s", __func__);
 }
@@ -108,9 +197,9 @@ osync_bool get_sync_info(OSyncPluginEnv *env, OSyncError **error)
 
 	osync_plugin_set_name(plugin, "kdepim-sync");
 	osync_plugin_set_longname(plugin, "KDE Desktop");
-	osync_plugin_set_description(plugin, "Plugin for the KDE 3.5 Desktop");
-	osync_plugin_set_config_type(plugin, OSYNC_PLUGIN_NO_CONFIGURATION);
-	osync_plugin_set_start_type(plugin, OSYNC_START_TYPE_PROCESS); 
+	osync_plugin_set_description(plugin, "Plugin for the KDE 3.5 Desktop PIM suite");
+	osync_plugin_set_config_type(plugin, OSYNC_PLUGIN_OPTIONAL_CONFIGURATION);
+	osync_plugin_set_start_type(plugin, OSYNC_START_TYPE_PROCESS);
 
 	osync_plugin_set_initialize(plugin, kde_initialize);
 	osync_plugin_set_finalize(plugin, kde_finalize);

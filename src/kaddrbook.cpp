@@ -28,23 +28,9 @@ SOFTWARE IS DISCLAIMED.
 
 #include "kaddrbook.h"
 #include <kapplication.h>
+#include <kabc/vcardconverter.h>
+#include <kabc/stdaddressbook.h>
 #include <dcopclient.h>
-#include <qdeepcopy.h>
-
-bool KContactDataSource::initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncError **error)
-{
-	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, plugin, info);
-
-	if (!OSyncDataSource::initialize(plugin, info, error)) {
-		osync_trace(TRACE_EXIT_ERROR, "%s", __PRETTY_FUNCTION__);
-		return false;
-	}
-
-	osync_objtype_sink_add_objformat_with_config(sink, "vcard30", "VCARD_EXTENSION=KDE");
-
-	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
-	return true;
-}
 
 /** Calculate the hash value for an Addressee.
  * Should be called before returning/writing the
@@ -69,28 +55,20 @@ void KContactDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, info, ctx);
 
-	DCOPClient *dcopc = KApplication::kApplication()->dcopClient();
-	if (!dcopc) {
-		osync_context_report_error(ctx, OSYNC_ERROR_INITIALIZATION, "Unable to initialize dcop client");
-		osync_trace(TRACE_EXIT_ERROR, "%s: Unable to initialize dcop client", __PRETTY_FUNCTION__);
+	// get a handle to the standard KDE addressbook
+	addressbookptr = KABC::StdAddressBook::self(false);  // load synchronously
+	KABC::StdAddressBook::setAutomaticSave(false);  // only when modified
+	modified = false;
+
+	ticket = addressbookptr->requestSaveTicket();
+	if ( !ticket ) {
+		osync_context_report_error(ctx, OSYNC_ERROR_NOT_SUPPORTED, "Unable to get save ticket");
+		osync_trace(TRACE_EXIT_ERROR, "%s: Unable to get save ticket", __PRETTY_FUNCTION__);
 		return;
 	}
 
-	QString appId = dcopc->registerAs("opensync-kaddrbook");
-
-	//check if kaddressbook is running, and return an error if it
-	//is running
-	if (dcopc->isApplicationRegistered("kaddressbook")) {
-		osync_context_report_error(ctx, OSYNC_ERROR_NO_CONNECTION, "KAddressBook is running. Please terminate it");
-		osync_trace(TRACE_EXIT_ERROR, "%s: KAddressBook is running", __PRETTY_FUNCTION__);
-		return;
-	}
-
-	//get a handle to the standard KDE addressbook
-	addressbookptr = KABC::StdAddressBook::self();
-	
 	OSyncDataSource::connect(info, ctx);
-	
+
 	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
 
@@ -98,18 +76,18 @@ void KContactDataSource::disconnect(OSyncPluginInfo *info, OSyncContext *ctx)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, info, ctx);
 
-	KABC::Ticket *ticket = addressbookptr->requestSaveTicket();
-	if ( !ticket ) {
-		osync_context_report_error(ctx, OSYNC_ERROR_NOT_SUPPORTED, "Unable to get save ticket");
-		osync_trace(TRACE_EXIT_ERROR, "%s: Unable to get save ticket", __PRETTY_FUNCTION__);
-		return;
+	if ( modified ) {
+		if ( !addressbookptr->save(ticket) ) {
+			osync_context_report_error(ctx, OSYNC_ERROR_NOT_SUPPORTED, "Unable to use ticket");
+			osync_trace(TRACE_EXIT_ERROR, "%s: Unable to save", __PRETTY_FUNCTION__);
+			return;
+		}
+	}
+	else {
+		addressbookptr->releaseSaveTicket(ticket);
 	}
 
-	if ( !addressbookptr->save( ticket ) ) {
-		osync_context_report_error(ctx, OSYNC_ERROR_NOT_SUPPORTED, "Unable to use ticket");
-		osync_trace(TRACE_EXIT_ERROR, "%s: Unable to save", __PRETTY_FUNCTION__);
-		return;
-	}
+	ticket = 0;
 
 	osync_context_report_success(ctx);
 	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
@@ -122,6 +100,7 @@ void KContactDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
 
 	OSyncError *error = NULL;
 
+	OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, objtype);
 	if (osync_objtype_sink_get_slowsync(sink)) {
 		osync_trace(TRACE_INTERNAL, "Got slow-sync, resetting hashtable");
 		if (!osync_hashtable_slowsync(hashtable, &error)) {
@@ -132,19 +111,15 @@ void KContactDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
 		}
 	}
 
-	// We must reload the KDE addressbook in order to retrieve the latest changes.
-	if (!addressbookptr->load()) {
-		osync_context_report_error(ctx, OSYNC_ERROR_GENERIC, "Couldn't reload KDE addressbook");
-		osync_trace(TRACE_EXIT_ERROR, "%s: Unable to reload addrbook", __PRETTY_FUNCTION__);
-		return;
-	}
-
 	OSyncFormatEnv *formatenv = osync_plugin_info_get_format_env(info);
 	OSyncObjFormat *objformat = osync_format_env_find_objformat(formatenv, "vcard30");
-	osync_objformat_set_config(objformat, "VCARD_EXTENSION=KDE");
 
 	KABC::VCardConverter converter;
 	for (KABC::AddressBook::Iterator it=addressbookptr->begin(); it!=addressbookptr->end(); it++ ) {
+
+		if ( ! has_category((*it).categories()) )
+			continue;
+
 		// Convert the VCARD data into a string
 		// only vcard3.0 exports Categories
 		QString data = converter.createVCard(*it, KABC::VCardConverter::v3_0);
@@ -187,7 +162,15 @@ void KContactDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChang
 	OSyncChangeType chtype = osync_change_get_changetype(chg);
 	switch(chtype) {
 		case OSYNC_CHANGE_TYPE_MODIFIED: {
-			KABC::Addressee addressee = converter.parseVCard(QString::fromUtf8(data, data_size));
+			KABC::Addressee addressee = converter.parseVCard(data);
+
+			// if we run with a configured category filter, but the received added vcard does
+			// not contain that category, add the filter-categories so that the address will be
+			// found again on the next sync
+			if ( ! has_category(addressee.categories()) ) {
+				for (QStringList::const_iterator it = categories.begin(); it != categories.end(); ++it )
+					addressee.insertCategory(*it);
+			}
 
 			// ensure it has the correct UID and revision
 			addressee.setUid(uid);
@@ -196,26 +179,36 @@ void KContactDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChang
 			// replace the current addressbook entry (if any) with the new one
 
 			addressbookptr->insertAddressee(addressee);
+			modified = true;
+			osync_trace(TRACE_INTERNAL, "KDE ADDRESSBOOK ENTRY UPDATED (UID=%s)", (const char *)uid.local8Bit());
 
 			QString hash = calc_hash(addressee);
 			osync_change_set_hash(chg, hash);
-//			osync_debug("kde", 3, "KDE ADDRESSBOOK ENTRY UPDATED (UID=%s)", (const char *)uid.local8Bit());
 			break;
 		}
 		case OSYNC_CHANGE_TYPE_ADDED: {
-			KABC::Addressee addressee = converter.parseVCard(QString::fromUtf8(data, data_size));
+			KABC::Addressee addressee = converter.parseVCard(data);
+
+			// if we run with a configured category filter, but the received added vcard does
+			// not contain that category, add the filter-categories so that the address will be
+			// found again on the next sync
+			if ( ! has_category(addressee.categories()) ) {
+				for (QStringList::const_iterator it = categories.begin(); it != categories.end(); ++it )
+					addressee.insertCategory(*it);
+			}
 
 			// ensure it has the correct revision
 			addressee.setRevision(QDateTime::currentDateTime());
 
 			// add the new address to the addressbook
 			addressbookptr->insertAddressee(addressee);
+			modified = true;
+			osync_trace(TRACE_INTERNAL, "KDE ADDRESSBOOK ENTRY ADDED (UID=%s)", (const char *)addressee.uid().local8Bit());
 
 			osync_change_set_uid(chg, addressee.uid().local8Bit());
 
 			QString hash = calc_hash(addressee);
 			osync_change_set_hash(chg, hash);
-//			osync_debug("kde", 3, "KDE ADDRESSBOOK ENTRY ADDED (UID=%s)", (const char *)addressee.uid().local8Bit());
 			break;
 		}
 		case OSYNC_CHANGE_TYPE_DELETED: {
@@ -227,10 +220,12 @@ void KContactDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChang
 
 			//find addressbook entry with matching UID and delete it
 			KABC::Addressee addressee = addressbookptr->findByUid(uid);
-			if(!addressee.isEmpty())
+			if(!addressee.isEmpty()) {
 				addressbookptr->removeAddressee(addressee);
+				modified = true;
+				osync_trace(TRACE_INTERNAL, "KDE ADDRESSBOOK ENTRY DELETED (UID=%s)", (const char*)uid.local8Bit());
+			}
 
-//			osync_debug("kde", 3, "KDE ADDRESSBOOK ENTRY DELETED (UID=%s)", (const char*)uid.local8Bit());
 
 			break;
 		}
