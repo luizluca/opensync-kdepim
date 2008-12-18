@@ -41,9 +41,9 @@ class KContactDataSource : public OSyncDataSource
 	private:
 		QString calc_hash(KABC::Addressee &e);
 
-		KABC::AddressBook* addressbookptr;
-		bool modified;  // set when needed to save addressbook back
-		KABC::Ticket *ticket;
+                KABC::AddressBook* addressbookptr;
+                bool modified;  // set when needed to save addressbook back
+                KABC::Ticket *ticket;
 };
 
 #endif

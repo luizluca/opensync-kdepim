@@ -276,7 +276,7 @@ void KNotesDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChange 
 
 		QString summary, body;
 
-	       OSyncXMLField *xmlfield = osync_xmlformat_get_first_field(xmlformat);
+		OSyncXMLField *xmlfield = osync_xmlformat_get_first_field(xmlformat);
 		for (; xmlfield; xmlfield = osync_xmlfield_get_next(xmlfield)) {
 			osync_trace(TRACE_INTERNAL, "Field: %s", osync_xmlfield_get_name(xmlfield));
 

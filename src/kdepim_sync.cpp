@@ -26,8 +26,6 @@ SOFTWARE IS DISCLAIMED.
  */
 
 #include <libkcal/resourcecalendar.h>
-//#include <kinstance.h>
-//#include <klocale.h>
 #include <kapplication.h>
 #include <kcmdlineargs.h>
 #include <kaboutdata.h>
@@ -39,6 +37,7 @@ SOFTWARE IS DISCLAIMED.
 #include <string.h>
 
 #include <opensync/opensync-plugin.h>
+#include <opensync/opensync-version.h>
 
 class KdePluginImplementation
 {
@@ -47,12 +46,12 @@ class KdePluginImplementation
 		{
 			KAboutData aboutData(
 			    "libopensync-kdepim-plugin",         // internal program name
-			    "OpenSync-KDE-plugin",               // displayable program name.
+			    "OpenSync-KDE3-plugin",              // displayable program name.
 			    "0.4",                               // version string
 			    "OpenSync KDEPIM plugin",            // short porgram description
 			    KAboutData::License_GPL,             // license type
-			    "(c) 2005, Eduardo Pereira Habkost, (c)" // copyright statement
-			    "(c) 2008, Martin Koller (c)",       // copyright statement
+			    "(c) 2005, Eduardo Pereira Habkost," // copyright statement
+			    "(c) 2008, Martin Koller",           // copyright statement
 			    0,                                   // any free form text
 			    "http://www.opensync.org",           // program home page address
 			    "http://www.opensync.org/newticket"  // bug report email address
@@ -67,10 +66,10 @@ class KdePluginImplementation
 				newApplication = true;
 			}
 
-			kaddrbook = new KContactDataSource();
+			kaddrbook  = new KContactDataSource();
 			kcal_event = new KCalEventDataSource(&kcal);
-			kcal_todo = new KCalTodoDataSource(&kcal);
-			knotes = new KNotesDataSource();
+			kcal_todo  = new KCalTodoDataSource(&kcal);
+			knotes     = new KNotesDataSource();
 		}
 
 		bool initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncError **error)
@@ -143,49 +142,66 @@ class KdePluginImplementation
 		bool newApplication;
 };
 
+//--------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------
+
 extern "C"
 {
 
-/** create actual plugin implementation
- *
- */
-static void *
-kde_initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncError **error)
+// create actual plugin implementation
+void *kde_initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncError **error)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, plugin, info, error);
 
-        KdePluginImplementation *impl_object = new KdePluginImplementation;
+	KdePluginImplementation *impl_object = new KdePluginImplementation;
 
-        if ( !impl_object->initialize(plugin, info, error) )
-          return 0;
+	if ( !impl_object->initialize(plugin, info, error) )
+		return 0;
 
 	/* Return the created object to the sync engine */
 	osync_trace(TRACE_EXIT, "%s: %p", __func__, impl_object);
 	return impl_object;
 }
 
+//--------------------------------------------------------------------------------
 /* Here we actually tell opensync which sinks are available. For this plugin, we
  * go through and enable all the sinks */
-static osync_bool kde_discover(void *userdata, OSyncPluginInfo *info, OSyncError **error)
+
+osync_bool kde_discover(void *userdata, OSyncPluginInfo *info, OSyncError **error)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, userdata, info, error);
 
-	int n, num_objtypes;
-	num_objtypes = osync_plugin_info_num_objtypes(info);
-	for (n = 0; n < num_objtypes; n++)
+	int num_objtypes = osync_plugin_info_num_objtypes(info);
+	for (int n = 0; n < num_objtypes; n++)
 		osync_objtype_sink_set_available(osync_plugin_info_nth_objtype(info, n), TRUE);
+
+        // set information about the peer (KDE itself)
+        {
+          OSyncVersion *version = osync_version_new(error);
+          osync_version_set_plugin(version, "kdepim-sync");
+
+          // this is the KDE version the plugin was implemented for and there will be
+          // no other 3.x version as KDE4 already exists
+          osync_version_set_softwareversion(version, "3.5");
+          osync_plugin_info_set_version(info, version);
+          osync_version_unref(version);
+        }
 
 	osync_trace(TRACE_EXIT, "%s", __func__);
 	return TRUE;
 }
 
-static void kde_finalize(void *userdata)
+//--------------------------------------------------------------------------------
+
+void kde_finalize(void *userdata)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p)", __func__, userdata);
 	KdePluginImplementation *impl_object = (KdePluginImplementation *)userdata;
 	delete impl_object;
 	osync_trace(TRACE_EXIT, "%s", __func__);
 }
+
+//--------------------------------------------------------------------------------
 
 osync_bool get_sync_info(OSyncPluginEnv *env, OSyncError **error)
 {
@@ -196,8 +212,9 @@ osync_bool get_sync_info(OSyncPluginEnv *env, OSyncError **error)
 		goto error;
 
 	osync_plugin_set_name(plugin, "kdepim-sync");
-	osync_plugin_set_longname(plugin, "KDE Desktop");
-	osync_plugin_set_description(plugin, "Plugin for the KDE 3.5 Desktop PIM suite");
+	osync_plugin_set_longname(plugin, "KDE3 PIM Synchronization");
+	osync_plugin_set_description(plugin,
+            "Synchronization with the KDE 3.5 Personal Information Management (PIM) suite");
 	osync_plugin_set_config_type(plugin, OSYNC_PLUGIN_OPTIONAL_CONFIGURATION);
 	osync_plugin_set_start_type(plugin, OSYNC_START_TYPE_PROCESS);
 
@@ -216,9 +233,13 @@ error:
 	return FALSE;
 }
 
+//--------------------------------------------------------------------------------
+
 int get_version(void)
 {
 	return 1;
 }
+
+//--------------------------------------------------------------------------------
 
 }// extern "C"

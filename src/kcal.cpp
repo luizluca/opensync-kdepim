@@ -1,22 +1,22 @@
 /***********************************************************************
 KCalendar support for OpenSync kdepim-sync plugin
 Copyright (C) 2004 Conectiva S. A.
- 
+
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License version 2 as
 published by the Free Software Foundation;
- 
+
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
 OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF THIRD PARTY RIGHTS.
 IN NO EVENT SHALL THE COPYRIGHT HOLDER(S) AND AUTHOR(S) BE LIABLE FOR ANY
-CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES 
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN 
-ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF 
+CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- 
-ALL LIABILITY, INCLUDING LIABILITY FOR INFRINGEMENT OF ANY PATENTS, 
-COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS, RELATING TO USE OF THIS 
+
+ALL LIABILITY, INCLUDING LIABILITY FOR INFRINGEMENT OF ANY PATENTS,
+COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS, RELATING TO USE OF THIS
 SOFTWARE IS DISCLAIMED.
 *************************************************************************/
 /**
@@ -76,7 +76,7 @@ bool KCalSharedResource::close(OSyncContext *)
 {
 	/* Save the changes */
 	calendar->save();
-	
+
 	if (--refcount > 0)
 		return true;
 
@@ -84,7 +84,7 @@ bool KCalSharedResource::close(OSyncContext *)
 	calendar = NULL;
 	return true;
 }
-	
+
 static QString calc_hash(const KCal::Incidence *e)
 {
 	QDateTime d = e->lastModified();
@@ -116,13 +116,13 @@ bool KCalSharedResource::commit(OSyncContext *ctx, OSyncChange *chg)
 		case OSYNC_CHANGE_TYPE_ADDED:
 		case OSYNC_CHANGE_TYPE_MODIFIED: {
 			KCal::ICalFormat format;
-	
+
 			OSyncData *odata = osync_change_get_data(chg);
 
 			char *databuf;
-			//size_t databuf_size; 
+			//size_t databuf_size;
 			// osync_data_get_data requires an unsigned int which is not compatible with size_t on 64bit machines
-			unsigned int databuf_size = 0; 
+			unsigned int databuf_size = 0;
 			osync_data_get_data(odata, &databuf, &databuf_size);
 
 			/* First, parse to a temporary calendar, because
@@ -194,7 +194,7 @@ bool KCalSharedResource::get_event_changes(OSyncDataSource *dsobj, OSyncPluginIn
 {
 	OSyncFormatEnv *formatenv = osync_plugin_info_get_format_env(info);
 	OSyncObjFormat *objformat = osync_format_env_find_objformat(formatenv, "vevent20");
-	
+
 	KCal::Event::List events = calendar->events();
 //	osync_debug("kcal", 3, "Number of events: %d", events.size());
 
@@ -218,7 +218,7 @@ bool KCalSharedResource::get_todo_changes(OSyncDataSource *dsobj, OSyncPluginInf
 {
 	OSyncFormatEnv *formatenv = osync_plugin_info_get_format_env(info);
 	OSyncObjFormat *objformat = osync_format_env_find_objformat(formatenv, "vtodo20");
-	
+
 	KCal::Todo::List todos = calendar->todos();
 
 //	osync_debug("kcal", 3, "Number of to-dos: %d", todos.size());
@@ -335,7 +335,7 @@ void KCalEventDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChan
 	// We use the same function for events and to-do
 	if (!kcal->commit(ctx, chg))
 		return;
-	
+
 	osync_hashtable_update_change(hashtable, chg);
 	osync_context_report_success(ctx);
 }
@@ -345,7 +345,7 @@ void KCalTodoDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChang
 	// We use the same function for calendar and to-do
 	if (!kcal->commit(ctx, chg))
 		return;
-	
+
 	osync_hashtable_update_change(hashtable, chg);
 	osync_context_report_success(ctx);
 }
