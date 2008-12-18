@@ -24,6 +24,8 @@ static void connect_wrapper(void *userdata, OSyncPluginInfo *info, OSyncContext 
 	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
 
+//--------------------------------------------------------------------------------
+
 static void disconnect_wrapper(void *userdata, OSyncPluginInfo *info, OSyncContext *ctx)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __PRETTY_FUNCTION__, userdata, info, ctx);
@@ -31,6 +33,8 @@ static void disconnect_wrapper(void *userdata, OSyncPluginInfo *info, OSyncConte
 	obj->disconnect(info, ctx);
 	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
+
+//--------------------------------------------------------------------------------
 
 static void get_changes_wrapper(void *userdata, OSyncPluginInfo *info, OSyncContext *ctx)
 {
@@ -40,6 +44,8 @@ static void get_changes_wrapper(void *userdata, OSyncPluginInfo *info, OSyncCont
 	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
 
+//--------------------------------------------------------------------------------
+
 static void commit_wrapper(void *userdata, OSyncPluginInfo *info, OSyncContext *ctx, OSyncChange *chg)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p)", __PRETTY_FUNCTION__, userdata, info, ctx, chg);
@@ -47,6 +53,8 @@ static void commit_wrapper(void *userdata, OSyncPluginInfo *info, OSyncContext *
 	obj->commit(info, ctx, chg);
 	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
+
+//--------------------------------------------------------------------------------
 
 static void sync_done_wrapper(void *userdata, OSyncPluginInfo *info, OSyncContext *ctx)
 {
@@ -58,15 +66,19 @@ static void sync_done_wrapper(void *userdata, OSyncPluginInfo *info, OSyncContex
 
 } // extern "C"
 
+//--------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------
+
 bool OSyncDataSource::initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncError **error)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, plugin, info);
-	
-        OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, objtype);
+
+	OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, objtype);
 
 	if (sink == NULL) {
-		osync_trace(TRACE_EXIT_ERROR, "%s: %s", __PRETTY_FUNCTION__, osync_error_print(error));
-		return false;
+		// this objtype is not enabled, but this is not an error
+		osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
+		return true;
 	}
 
 	OSyncObjTypeSinkFunctions functions;
@@ -91,6 +103,8 @@ bool OSyncDataSource::initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSy
 	return true;
 }
 
+//--------------------------------------------------------------------------------
+
 void OSyncDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, info, ctx);
@@ -107,6 +121,8 @@ void OSyncDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
 	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
 
+//--------------------------------------------------------------------------------
+
 void OSyncDataSource::sync_done(OSyncPluginInfo *info, OSyncContext *ctx)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, info, ctx);
@@ -119,9 +135,11 @@ void OSyncDataSource::sync_done(OSyncPluginInfo *info, OSyncContext *ctx)
 	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
 
+//--------------------------------------------------------------------------------
+
 bool OSyncDataSource::report_change(OSyncPluginInfo *info, OSyncContext *ctx, QString uid, QString data, QString hash, OSyncObjFormat *objformat)
 {
-                OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, objtype);
+	OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, objtype);
 	OSyncError *error = NULL;
 	OSyncChangeType changetype;
 	OSyncData *odata;
@@ -175,19 +193,21 @@ error:
 	return false;
 }
 
+//--------------------------------------------------------------------------------
+
 bool OSyncDataSource::report_deleted(OSyncPluginInfo *info, OSyncContext *ctx, OSyncObjFormat *objformat)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __PRETTY_FUNCTION__, info, ctx, objformat);
-	
+
 	OSyncError *error = NULL;
 	OSyncList *u, *uids  = osync_hashtable_get_deleted(hashtable);
 	OSyncChange *change;
-                OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, objtype);
-	
+	OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, objtype);
+
 	for (u=uids; u; u = u->next) {
 		char *uid = (char *) u->data;
 		osync_trace(TRACE_INTERNAL, "going to delete entry with uid: %s", uids);
-		
+	
 		change = osync_change_new(&error);
 		if (!change)
 			goto error;
@@ -195,7 +215,7 @@ bool OSyncDataSource::report_deleted(OSyncPluginInfo *info, OSyncContext *ctx, O
 		osync_change_set_changetype(change, OSYNC_CHANGE_TYPE_DELETED);
 		osync_change_set_uid(change, uid);
 
-		OSyncData *data = osync_data_new(NULL, 0, objformat, &error); 
+		OSyncData *data = osync_data_new(NULL, 0, objformat, &error);
 		if (!data)
 			goto error_free_change;
 
@@ -211,9 +231,9 @@ bool OSyncDataSource::report_deleted(OSyncPluginInfo *info, OSyncContext *ctx, O
 	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 	return true;
 
-error_free_change:	
+error_free_change:
 	osync_change_unref(change);
-error:	
+error:
 
 	osync_context_report_osyncerror(ctx, error);
 	osync_trace(TRACE_EXIT_ERROR, "%s: %s", __PRETTY_FUNCTION__, osync_error_print(&error));
@@ -221,11 +241,15 @@ error:
 	return false;
 }
 
+//--------------------------------------------------------------------------------
+
 OSyncDataSource::~OSyncDataSource()
 {
 	if (hashtable)
 		osync_hashtable_unref(hashtable);
 }
+
+//--------------------------------------------------------------------------------
 
 bool OSyncDataSource::has_category(const QStringList &list) const
 {
@@ -236,3 +260,5 @@ bool OSyncDataSource::has_category(const QStringList &list) const
 	}
 	return false; // not found
 }
+
+//--------------------------------------------------------------------------------
