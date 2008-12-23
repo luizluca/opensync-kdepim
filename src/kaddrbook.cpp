@@ -40,16 +40,18 @@ SOFTWARE IS DISCLAIMED.
 QString KContactDataSource::calc_hash(KABC::Addressee &e)
 {
 	//Get the revision date of the KDE addressbook entry.
-	//Regard entries with invalid revision dates as having just been changed.
 	QDateTime revdate = e.revision();
-//	osync_debug("kde", 3, "Getting hash: %s", revdate.toString().data());
-	if (!revdate.isValid()) {
-		revdate = QDateTime::currentDateTime();
+	if ( !revdate.isValid() ) {
+                // if no revision is available, always return the same 0-time stamp
+          	// to avoid that 2 calls deliver different times which would be treated as changed entry
+		revdate.setTime_t(0);
 		e.setRevision(revdate);
 	}
 
-	return revdate.toString();
+	return revdate.toString(Qt::ISODate);
 }
+
+//--------------------------------------------------------------------------------
 
 void KContactDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
 {
@@ -72,6 +74,8 @@ void KContactDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
 	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
 
+//--------------------------------------------------------------------------------
+
 void KContactDataSource::disconnect(OSyncPluginInfo *info, OSyncContext *ctx)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, info, ctx);
@@ -93,6 +97,8 @@ void KContactDataSource::disconnect(OSyncPluginInfo *info, OSyncContext *ctx)
 	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 	return;
 }
+
+//--------------------------------------------------------------------------------
 
 void KContactDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
 {
@@ -142,6 +148,8 @@ void KContactDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
 	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
 
+//--------------------------------------------------------------------------------
+
 void KContactDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChange *chg)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, ctx, chg);
@@ -157,10 +165,10 @@ void KContactDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChang
 
 	osync_data_get_data(odata, &data, &data_size);
 
-	QString uid = osync_change_get_uid(chg);
+	QString uid = QString::fromUtf8(osync_change_get_uid(chg));
 
-	OSyncChangeType chtype = osync_change_get_changetype(chg);
-	switch(chtype) {
+	switch ( osync_change_get_changetype(chg) )
+        {
 		case OSYNC_CHANGE_TYPE_MODIFIED: {
 			KABC::Addressee addressee = converter.parseVCard(data);
 
@@ -180,10 +188,10 @@ void KContactDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChang
 
 			addressbookptr->insertAddressee(addressee);
 			modified = true;
-			osync_trace(TRACE_INTERNAL, "KDE ADDRESSBOOK ENTRY UPDATED (UID=%s)", (const char *)uid.local8Bit());
+			osync_trace(TRACE_INTERNAL, "KDE ADDRESSBOOK ENTRY UPDATED (UID=%s)", (const char *)uid.utf8());
 
 			QString hash = calc_hash(addressee);
-			osync_change_set_hash(chg, hash);
+			osync_change_set_hash(chg, hash.utf8());
 			break;
 		}
 		case OSYNC_CHANGE_TYPE_ADDED: {
@@ -203,12 +211,12 @@ void KContactDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChang
 			// add the new address to the addressbook
 			addressbookptr->insertAddressee(addressee);
 			modified = true;
-			osync_trace(TRACE_INTERNAL, "KDE ADDRESSBOOK ENTRY ADDED (UID=%s)", (const char *)addressee.uid().local8Bit());
+			osync_trace(TRACE_INTERNAL, "KDE ADDRESSBOOK ENTRY ADDED (UID=%s)", (const char *)addressee.uid().utf8());
 
-			osync_change_set_uid(chg, addressee.uid().local8Bit());
+			osync_change_set_uid(chg, addressee.uid().utf8());
 
 			QString hash = calc_hash(addressee);
-			osync_change_set_hash(chg, hash);
+			osync_change_set_hash(chg, hash.utf8());
 			break;
 		}
 		case OSYNC_CHANGE_TYPE_DELETED: {
@@ -223,9 +231,8 @@ void KContactDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChang
 			if(!addressee.isEmpty()) {
 				addressbookptr->removeAddressee(addressee);
 				modified = true;
-				osync_trace(TRACE_INTERNAL, "KDE ADDRESSBOOK ENTRY DELETED (UID=%s)", (const char*)uid.local8Bit());
+				osync_trace(TRACE_INTERNAL, "KDE ADDRESSBOOK ENTRY DELETED (UID=%s)", (const char*)uid.utf8());
 			}
-
 
 			break;
 		}
@@ -241,3 +248,5 @@ void KContactDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChang
 	osync_context_report_success(ctx);
 	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
+
+//--------------------------------------------------------------------------------
