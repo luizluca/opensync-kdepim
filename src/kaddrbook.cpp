@@ -169,8 +169,9 @@ void KContactDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChang
 
 	switch ( osync_change_get_changetype(chg) )
         {
+		case OSYNC_CHANGE_TYPE_ADDED:
 		case OSYNC_CHANGE_TYPE_MODIFIED: {
-			KABC::Addressee addressee = converter.parseVCard(data);
+			KABC::Addressee addressee = converter.parseVCard(QString::fromUtf8(data));
 
 			// if we run with a configured category filter, but the received added vcard does
 			// not contain that category, add the filter-categories so that the address will be
@@ -180,42 +181,20 @@ void KContactDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChang
 					addressee.insertCategory(*it);
 			}
 
-			// ensure it has the correct UID and revision
+			// ensure it has the correct UID
 			addressee.setUid(uid);
-			addressee.setRevision(QDateTime::currentDateTime());
 
 			// replace the current addressbook entry (if any) with the new one
-
+                        // this changes the revision inside the KDE-addressbook
 			addressbookptr->insertAddressee(addressee);
+
 			modified = true;
 			osync_trace(TRACE_INTERNAL, "KDE ADDRESSBOOK ENTRY UPDATED (UID=%s)", (const char *)uid.utf8());
 
-			QString hash = calc_hash(addressee);
-			osync_change_set_hash(chg, hash.utf8());
-			break;
-		}
-		case OSYNC_CHANGE_TYPE_ADDED: {
-			KABC::Addressee addressee = converter.parseVCard(data);
+                        // read out the set addressee to get the new revision
+			KABC::Addressee addresseeNew = addressbookptr->findByUid(uid);
 
-			// if we run with a configured category filter, but the received added vcard does
-			// not contain that category, add the filter-categories so that the address will be
-			// found again on the next sync
-			if ( ! has_category(addressee.categories()) ) {
-				for (QStringList::const_iterator it = categories.begin(); it != categories.end(); ++it )
-					addressee.insertCategory(*it);
-			}
-
-			// ensure it has the correct revision
-			addressee.setRevision(QDateTime::currentDateTime());
-
-			// add the new address to the addressbook
-			addressbookptr->insertAddressee(addressee);
-			modified = true;
-			osync_trace(TRACE_INTERNAL, "KDE ADDRESSBOOK ENTRY ADDED (UID=%s)", (const char *)addressee.uid().utf8());
-
-			osync_change_set_uid(chg, addressee.uid().utf8());
-
-			QString hash = calc_hash(addressee);
+			QString hash = calc_hash(addresseeNew);
 			osync_change_set_hash(chg, hash.utf8());
 			break;
 		}
