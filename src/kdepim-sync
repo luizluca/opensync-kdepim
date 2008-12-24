@@ -5,7 +5,7 @@
       <Enabled>1</Enabled>
       <Formats>
         <Format>
-          <Config>VCARD_EXTENSION=KDE3</Config>
+          <Config>VCARD_EXTENSION=KDE</Config>
           <Name>vcard30</Name>
         </Format>
       </Formats>
