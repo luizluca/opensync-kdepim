@@ -93,7 +93,7 @@ bool OSyncDataSource::initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSy
 	osync_objtype_sink_set_functions(sink, functions, this);
 
 	const char *configdir = osync_plugin_info_get_configdir(info);
-	QString tablepath = QString("%1/%2-hashtable.db").arg(configdir, objtype);
+	QString tablepath = QString("%1/hashtable.db").arg(configdir);
 	hashtable = osync_hashtable_new(QFile::encodeName(tablepath), objtype, error);
 	if (hashtable == NULL) {
 		osync_trace(TRACE_EXIT_ERROR, "%s: %s", __PRETTY_FUNCTION__, osync_error_print(error));
