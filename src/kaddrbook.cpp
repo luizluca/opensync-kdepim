@@ -24,6 +24,7 @@ SOFTWARE IS DISCLAIMED.
  * @author Eduardo Pereira Habkost <ehabkost@conectiva.com.br>
  * @author Armin Bauer <armin.bauer@opensync.org>
  * @author Andrew Baumann <andrewb@cse.unsw.edu.au>
+ * @author Martin Koller <m.koller@surfeu.at>
  */
 
 #include "kaddrbook.h"
@@ -45,7 +46,7 @@ QString KContactDataSource::calc_hash(KABC::Addressee &e)
                 // if no revision is available, always return the same 0-time stamp
           	// to avoid that 2 calls deliver different times which would be treated as changed entry
 		revdate.setTime_t(0);
-		e.setRevision(revdate);
+		//e.setRevision(revdate);
 	}
 
 	return revdate.toString(Qt::ISODate);
@@ -64,8 +65,8 @@ void KContactDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
 
 	ticket = addressbookptr->requestSaveTicket();
 	if ( !ticket ) {
-		osync_context_report_error(ctx, OSYNC_ERROR_NOT_SUPPORTED, "Unable to get save ticket");
-		osync_trace(TRACE_EXIT_ERROR, "%s: Unable to get save ticket", __PRETTY_FUNCTION__);
+		osync_context_report_error(ctx, OSYNC_ERROR_NOT_SUPPORTED, "Unable to get save ticket for addressbook");
+		osync_trace(TRACE_EXIT_ERROR, "%s: Unable to get save ticket for addressbook", __PRETTY_FUNCTION__);
 		return;
 	}
 
@@ -82,7 +83,7 @@ void KContactDataSource::disconnect(OSyncPluginInfo *info, OSyncContext *ctx)
 
 	if ( modified ) {
 		if ( !addressbookptr->save(ticket) ) {
-			osync_context_report_error(ctx, OSYNC_ERROR_NOT_SUPPORTED, "Unable to use ticket");
+			osync_context_report_error(ctx, OSYNC_ERROR_NOT_SUPPORTED, "Unable to use ticket on addressbook");
 			osync_trace(TRACE_EXIT_ERROR, "%s: Unable to save", __PRETTY_FUNCTION__);
 			return;
 		}
@@ -107,6 +108,7 @@ void KContactDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
 	OSyncError *error = NULL;
 
 	OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, objtype);
+
 	if (osync_objtype_sink_get_slowsync(sink)) {
 		osync_trace(TRACE_INTERNAL, "Got slow-sync, resetting hashtable");
 		if (!osync_hashtable_slowsync(hashtable, &error)) {
