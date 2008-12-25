@@ -39,7 +39,7 @@
       <Enabled>1</Enabled>
       <Formats>
         <Format>
-          <Name>xmlformat-note</Name>
+          <Name>memo</Name>
         </Format>
       </Formats>
       <Name>Notes</Name>
