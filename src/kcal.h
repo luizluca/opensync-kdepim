@@ -26,16 +26,13 @@ SOFTWARE IS DISCLAIMED.
 
 #include <libkcal/calendarresources.h>
 #include <libkcal/incidence.h>
-#include <libkcal/icalformat.h>
-#include <libkcal/calendarlocal.h>
-#include <kdeversion.h>
 
 #include "datasource.h"
 
 class KCalSharedResource
 {
 	public:
-		KCalSharedResource() {calendar = NULL; refcount = 0;};
+		KCalSharedResource() : calendar(0), refcount(0) { }
 		bool open(OSyncContext *ctx);
 		bool close(OSyncContext *ctx);
 		bool get_event_changes(OSyncDataSource *dsobj, OSyncPluginInfo *info, OSyncContext *ctx);
@@ -45,9 +42,12 @@ class KCalSharedResource
 	private:
 		KCal::CalendarResources *calendar;
 		int refcount;
-	
-		bool report_incidence(OSyncDataSource *dsobj, OSyncPluginInfo *info, OSyncContext *ctx, KCal::Incidence *e, OSyncObjFormat *objformat);
+
+		bool report_incidence(OSyncDataSource *dsobj, OSyncPluginInfo *info, OSyncContext *ctx,
+                                      KCal::Incidence *e, OSyncObjFormat *objformat);
 };
+
+//--------------------------------------------------------------------------------
 
 class KCalEventDataSource : public OSyncDataSource
 {
@@ -64,6 +64,8 @@ class KCalEventDataSource : public OSyncDataSource
 		KCalSharedResource *kcal;
 };
 
+//--------------------------------------------------------------------------------
+
 class KCalTodoDataSource : public OSyncDataSource
 {
 	public:
@@ -78,3 +80,5 @@ class KCalTodoDataSource : public OSyncDataSource
 	private:
 		KCalSharedResource *kcal;
 };
+
+//--------------------------------------------------------------------------------
