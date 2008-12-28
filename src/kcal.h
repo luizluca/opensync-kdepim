@@ -37,7 +37,7 @@ class KCalSharedResource
 		bool close(OSyncContext *ctx);
 		bool get_event_changes(OSyncDataSource *dsobj, OSyncPluginInfo *info, OSyncContext *ctx);
 		bool get_todo_changes(OSyncDataSource *dsobj, OSyncPluginInfo *info, OSyncContext *ctx);
-		bool commit(OSyncContext *ctx, OSyncChange *chg);
+		bool commit(OSyncDataSource *dsobj, OSyncContext *ctx, OSyncChange *chg);
 
 	private:
 		KCal::CalendarResources *calendar;

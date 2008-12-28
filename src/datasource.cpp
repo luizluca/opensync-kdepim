@@ -95,7 +95,7 @@ bool OSyncDataSource::initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSy
 	const char *configdir = osync_plugin_info_get_configdir(info);
 	QString tablepath = QString("%1/hashtable.db").arg(configdir);
 	hashtable = osync_hashtable_new(QFile::encodeName(tablepath), objtype, error);
-	if (hashtable == NULL) {
+	if ( !hashtable ) {
 		osync_trace(TRACE_EXIT_ERROR, "%s: %s", __PRETTY_FUNCTION__, osync_error_print(error));
 		return false;
 	}
@@ -103,6 +103,22 @@ bool OSyncDataSource::initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSy
         {
 		osync_trace(TRACE_EXIT_ERROR, "%s: %s", __PRETTY_FUNCTION__, osync_error_print(error));
 		return false;
+        }
+
+        // NOTE: advanced options are per plugin; currently we read the FilterCategory
+        // for each Resource (later this could be separated by Resource via a different name, etc.)
+        // read advanced options
+        OSyncPluginConfig *config = osync_plugin_info_get_config(info);
+        if ( config )
+        {
+          OSyncList *entry = osync_plugin_config_get_advancedoptions(config);
+          for (; entry; entry = entry->next)
+          {
+            OSyncPluginAdvancedOption *option = static_cast<OSyncPluginAdvancedOption*>(entry->data);
+
+            if ( strcmp(osync_plugin_advancedoption_get_name(option), "FilterCategory") == 0 )
+              categories.append(QString::fromUtf8(osync_plugin_advancedoption_get_value(option)));
+          }
         }
 
 	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);

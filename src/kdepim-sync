@@ -1,5 +1,14 @@
 <?xml version="1.0"?>
 <config version="1.0">
+  <AdvancedOptions>
+    <AdvancedOption>
+      <DisplayName>Filter Categories</DisplayName>
+      <Name>FilterCategory</Name>
+      <Type>string</Type>
+      <Value></Value>
+    </AdvancedOption>
+  </AdvancedOptions>
+
   <Resources>
     <Resource>
       <Enabled>1</Enabled>

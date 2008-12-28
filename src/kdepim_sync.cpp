@@ -88,29 +88,6 @@ class KdePluginImplementation
 			if (!knotes->initialize(plugin, info, error))
 				goto error;
 
-      /*
-      // get the config
-      OSyncPluginConfig *config = osync_plugin_info_get_config(info);
-      if (!config) {
-        osync_error_set(error, OSYNC_ERROR_GENERIC, "Unable to get config.");
-        goto error;
-      }
-
-      // Process plugin specific advanced options 
-      OSyncList *optslist = osync_plugin_config_get_advancedoptions(config);
-      for (; optslist; optslist = optslist->next) {
-        OSyncPluginAdvancedOption *option = optslist->data;
-
-        const char *val = osync_plugin_advancedoption_get_value(option);
-        const char *name = osync_plugin_advancedoption_get_name(option);
-
-        if (!strcmp(name,"category")) {
-          }
-      }
-
-          */
-
-
 			osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 			return true;
 

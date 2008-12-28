@@ -31,6 +31,11 @@ class OSyncDataSource
 		virtual void commit(OSyncPluginInfo *info, OSyncContext *ctx, OSyncChange *chg) = 0;
 		virtual void sync_done(OSyncPluginInfo *info, OSyncContext *ctx);
 
+		// return true if at least one item in the given list is included in the categories member
+		bool has_category(const QStringList &list) const;
+
+		const QStringList &getCategories() const { return categories; }
+
 	protected:
 		const char *objtype;
 		OSyncHashTable *hashtable;
@@ -39,9 +44,6 @@ class OSyncDataSource
 		/* utility functions for subclasses */
 		bool report_change(OSyncPluginInfo *info, OSyncContext *ctx, QString uid, QString data, QString hash, OSyncObjFormat *objformat);
 		bool report_deleted(OSyncPluginInfo *info, OSyncContext *ctx, OSyncObjFormat *objformat);
-
-		// return true if at least one item in the given list is included in the categories member
-		bool has_category(const QStringList &list) const;
 };
 
 #endif // KDEPIM_OSYNC_DATASOURCE_H

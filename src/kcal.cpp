@@ -56,7 +56,7 @@ bool KCalSharedResource::open(OSyncContext *ctx)
 
 //--------------------------------------------------------------------------------
 
-bool KCalSharedResource::close(OSyncContext *ctx)
+bool KCalSharedResource::close(OSyncContext *)
 {
 	if (--refcount > 0)
 		return true;
@@ -87,7 +87,7 @@ static QString calc_hash(const KCal::Incidence *e)
 /** Add or change an incidence on the calendar. This function
  * is used for events and to-dos
  */
-bool KCalSharedResource::commit(OSyncContext *ctx, OSyncChange *chg)
+bool KCalSharedResource::commit(OSyncDataSource *dsobj, OSyncContext *ctx, OSyncChange *chg)
 {
 	OSyncChangeType type = osync_change_get_changetype(chg);
 	switch (type) {
@@ -138,6 +138,19 @@ bool KCalSharedResource::commit(OSyncContext *ctx, OSyncChange *chg)
 				if (type == OSYNC_CHANGE_TYPE_MODIFIED)
 					e->setUid(QString::fromUtf8(osync_change_get_uid(chg)));
 
+				// if we run with a configured category filter, but the received added incidence does
+				// not contain that category, add the filter-categories so that the incidence will be
+				// found again on the next sync
+				if ( ! dsobj->has_category(e->categories()) )
+        {
+          QStringList cats = e->categories();
+
+					for (QStringList::const_iterator it = dsobj->categories.constBegin(); it != dsobj->categories.constEnd(); ++it )
+						cats.append(*it);
+
+          e->setCategories(cats);
+				}
+
 				osync_change_set_uid(chg, e->uid().utf8());
 				QString hash = calc_hash(*i);
 				osync_change_set_hash(chg, hash.utf8());
@@ -187,6 +200,9 @@ bool KCalSharedResource::get_event_changes(OSyncDataSource *dsobj, OSyncPluginIn
 
 	for (KCal::Event::List::ConstIterator i = events.begin(); i != events.end(); i++) {
 
+		if ( ! dsobj->has_category((*i)->categories()) )
+			continue;
+
 		/* Skip entries from birthday resource. This is just a workaround.
 		 * patch by rhuitl
 		 * FIXME: todo: add a list of resources to kdepim-sync.conf
@@ -211,6 +227,9 @@ bool KCalSharedResource::get_todo_changes(OSyncDataSource *dsobj, OSyncPluginInf
 	KCal::Todo::List todos = calendar->todos();
 
 	for (KCal::Todo::List::ConstIterator i = todos.begin(); i != todos.end(); i++) {
+		if ( ! dsobj->has_category((*i)->categories()) )
+			continue;
+
 		if (!report_incidence(dsobj, info, ctx, *i, objformat))
 			return false;
 	}
@@ -332,7 +351,7 @@ void KCalTodoDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
 void KCalEventDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChange *chg)
 {
 	// We use the same function for events and to-do
-	if (!kcal->commit(ctx, chg))
+	if (!kcal->commit(this, ctx, chg))
 		return;
 
 	osync_hashtable_update_change(hashtable, chg);
@@ -344,7 +363,7 @@ void KCalEventDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChan
 void KCalTodoDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChange *chg)
 {
 	// We use the same function for calendar and to-do
-	if (!kcal->commit(ctx, chg))
+	if (!kcal->commit(this, ctx, chg))
 		return;
 
 	osync_hashtable_update_change(hashtable, chg);
