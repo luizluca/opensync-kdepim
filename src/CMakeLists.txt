@@ -21,6 +21,11 @@ TARGET_LINK_LIBRARIES( kdepim-sync ${OPENSYNC_LIBRARIES} ${KDE3_LIBRARIES} ${KDE
 # Install plugins
 OPENSYNC_PLUGIN_INSTALL( kdepim-sync )
 
-# Install config template	
+# Install config template
 OPENSYNC_PLUGIN_CONFIG( kdepim-sync )
 
+# install capabilities file
+OPENSYNC_PLUGIN_CAPABILITIES( kdepim-sync-capabilities.xml )
+
+# install description file
+OPENSYNC_PLUGIN_DESCRIPTIONS( kdepim-sync-description.xml )
