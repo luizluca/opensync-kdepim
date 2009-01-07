@@ -144,7 +144,7 @@ void *kde_initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncError **er
 /* Here we actually tell opensync which sinks are available. For this plugin, we
  * go through and enable all the sinks */
 
-osync_bool kde_discover(void *userdata, OSyncPluginInfo *info, OSyncError **error)
+osync_bool kde_discover(OSyncPluginInfo *info, void *userdata, OSyncError **error)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, userdata, info, error);
 
