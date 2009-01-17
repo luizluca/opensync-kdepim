@@ -17,7 +17,7 @@ extern "C"
  * osync_objtype_sink_get_userdata(osync_plugin_info_get_sink(info))
  */
 
-static void connect_wrapper(void *userdata, OSyncPluginInfo *info, OSyncContext *ctx)
+static void connect_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, void *userdata)
 {
   osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __PRETTY_FUNCTION__, userdata, info, ctx);
   OSyncDataSource *obj = (OSyncDataSource *)osync_objtype_sink_get_userdata(osync_plugin_info_get_sink(info));
@@ -27,7 +27,7 @@ static void connect_wrapper(void *userdata, OSyncPluginInfo *info, OSyncContext 
 
 //--------------------------------------------------------------------------------
 
-static void disconnect_wrapper(void *userdata, OSyncPluginInfo *info, OSyncContext *ctx)
+static void disconnect_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, void *userdata)
 {
   osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __PRETTY_FUNCTION__, userdata, info, ctx);
   OSyncDataSource *obj = (OSyncDataSource *)osync_objtype_sink_get_userdata(osync_plugin_info_get_sink(info));
@@ -37,7 +37,8 @@ static void disconnect_wrapper(void *userdata, OSyncPluginInfo *info, OSyncConte
 
 //--------------------------------------------------------------------------------
 
-static void get_changes_wrapper(void *userdata, OSyncPluginInfo *info, OSyncContext *ctx)
+static void get_changes_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info,
+                                OSyncContext *ctx, osync_bool slow_sync,void *userdata)
 {
   osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __PRETTY_FUNCTION__, userdata, info, ctx);
   OSyncDataSource *obj = (OSyncDataSource *)osync_objtype_sink_get_userdata(osync_plugin_info_get_sink(info));
@@ -47,7 +48,8 @@ static void get_changes_wrapper(void *userdata, OSyncPluginInfo *info, OSyncCont
 
 //--------------------------------------------------------------------------------
 
-static void commit_wrapper(void *userdata, OSyncPluginInfo *info, OSyncContext *ctx, OSyncChange *chg)
+static void commit_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info,
+                           OSyncContext *ctx, OSyncChange *chg, void *userdata)
 {
   osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p)", __PRETTY_FUNCTION__, userdata, info, ctx, chg);
   OSyncDataSource *obj = (OSyncDataSource *)osync_objtype_sink_get_userdata(osync_plugin_info_get_sink(info));
@@ -57,7 +59,7 @@ static void commit_wrapper(void *userdata, OSyncPluginInfo *info, OSyncContext *
 
 //--------------------------------------------------------------------------------
 
-static void sync_done_wrapper(void *userdata, OSyncPluginInfo *info, OSyncContext *ctx)
+static void sync_done_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, void *userdata)
 {
   osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __PRETTY_FUNCTION__, userdata, info, ctx);
   OSyncDataSource *obj = (OSyncDataSource *)osync_objtype_sink_get_userdata(osync_plugin_info_get_sink(info));
