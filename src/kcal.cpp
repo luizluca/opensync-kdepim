@@ -22,7 +22,7 @@ SOFTWARE IS DISCLAIMED.
 /**
  * @author Eduardo Pereira Habkost <ehabkost@conectiva.com.br>
  * @author Andrew Baumann <andrewb@cse.unsw.edu.au>
- * @author Martin Koller <m.koller@surfeu.at>
+ * @author Martin Koller <kollix@aon.at>
  */
 
 #include "kcal.h"

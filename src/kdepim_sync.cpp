@@ -22,7 +22,7 @@ SOFTWARE IS DISCLAIMED.
 /**
  * @autor Eduardo Pereira Habkost <ehabkost@conectiva.com.br>
  * edit Matthias Jahn <jahn.matthias@freenet.de>
- * changed to 0.40 API by Martin Koller <m.koller@surfeu.at>
+ * changed to 0.40 API by Martin Koller <kollix@aon.at>
  */
 
 #include <libkcal/resourcecalendar.h>

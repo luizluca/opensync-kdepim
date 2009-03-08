@@ -23,7 +23,7 @@ SOFTWARE IS DISCLAIMED.
  *
  * @author Eduardo Pereira Habkost <ehabkost@conectiva.com.br>
  * @author Andrew Baumann <andrewb@cse.unsw.edu.au>
- * @author Martin Koller <m.koller@surfeu.at>
+ * @author Martin Koller <kollix@aon.at>
  *
  * This module implements the access to the KDE 3.2 Notes, that are
  * stored on KGlobal::dirs()->saveLocation( "data" , "knotes/" ) + "notes.ics"

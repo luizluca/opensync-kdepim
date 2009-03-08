@@ -24,7 +24,7 @@ SOFTWARE IS DISCLAIMED.
  * @author Eduardo Pereira Habkost <ehabkost@conectiva.com.br>
  * @author Armin Bauer <armin.bauer@opensync.org>
  * @author Andrew Baumann <andrewb@cse.unsw.edu.au>
- * @author Martin Koller <m.koller@surfeu.at>
+ * @author Martin Koller <kollix@aon.at>
  */
 
 #include "kaddrbook.h"
