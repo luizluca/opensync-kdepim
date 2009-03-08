@@ -1,6 +1,6 @@
 /**
  * @author Andrew Baumann <andrewb@cse.unsw.edu.au>
- * changed to 0.40 API by Martin Koller <m.koller@surfeu.at>
+ * changed to 0.40 API by Martin Koller <kollix@aon.at>
  */
 
 #include <stdlib.h>
@@ -11,16 +11,11 @@
 
 extern "C"
 {
-/* NB: the userdata passed to the sink callbacks is not the sink's userdata, as
- * you might expect, but instead the plugin's userdata, which in our case is the
- * KdePluginImplementation object pointer. So we need to get the sink object from
- * osync_objtype_sink_get_userdata(sink)
- */
 
 static void connect_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, void *userdata)
 {
-  osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __PRETTY_FUNCTION__, userdata, info, ctx);
-  OSyncDataSource *obj = (OSyncDataSource *)osync_objtype_sink_get_userdata(sink);
+  osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __PRETTY_FUNCTION__, sink, userdata, info, ctx);
+  OSyncDataSource *obj = static_cast<OSyncDataSource *>(userdata);
   obj->connect(info, ctx);
   osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
@@ -29,8 +24,8 @@ static void connect_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSync
 
 static void disconnect_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, void *userdata)
 {
-  osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __PRETTY_FUNCTION__, userdata, info, ctx);
-  OSyncDataSource *obj = (OSyncDataSource *)osync_objtype_sink_get_userdata(sink);
+  osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p)", __PRETTY_FUNCTION__, sink, userdata, info, ctx);
+  OSyncDataSource *obj = static_cast<OSyncDataSource *>(userdata);
   obj->disconnect(info, ctx);
   osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
@@ -40,8 +35,8 @@ static void disconnect_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OS
 static void get_changes_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info,
                                 OSyncContext *ctx, osync_bool slow_sync,void *userdata)
 {
-  osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __PRETTY_FUNCTION__, userdata, info, ctx);
-  OSyncDataSource *obj = (OSyncDataSource *)osync_objtype_sink_get_userdata(sink);
+  osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p)", __PRETTY_FUNCTION__, sink, userdata, info, ctx);
+  OSyncDataSource *obj = static_cast<OSyncDataSource *>(userdata);
   obj->get_changes(info, ctx);
   osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
@@ -51,8 +46,8 @@ static void get_changes_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info,
 static void commit_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info,
                            OSyncContext *ctx, OSyncChange *chg, void *userdata)
 {
-  osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p)", __PRETTY_FUNCTION__, userdata, info, ctx, chg);
-  OSyncDataSource *obj = (OSyncDataSource *)osync_objtype_sink_get_userdata(sink);
+  osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p, %p)", __PRETTY_FUNCTION__, sink, userdata, info, ctx, chg);
+  OSyncDataSource *obj = static_cast<OSyncDataSource *>(userdata);
   obj->commit(info, ctx, chg);
   osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
@@ -61,8 +56,8 @@ static void commit_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info,
 
 static void sync_done_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, void *userdata)
 {
-  osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __PRETTY_FUNCTION__, userdata, info, ctx);
-  OSyncDataSource *obj = (OSyncDataSource *)osync_objtype_sink_get_userdata(sink);
+  osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p)", __PRETTY_FUNCTION__, sink, userdata, info, ctx);
+  OSyncDataSource *obj = static_cast<OSyncDataSource *>(userdata);
   obj->sync_done(info, ctx);
   osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
