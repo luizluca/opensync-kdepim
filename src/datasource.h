@@ -4,11 +4,10 @@
 #include <qstringlist.h>
 #include <opensync/opensync.h>
 #include <opensync/opensync-plugin.h>
-#include <opensync/opensync-context.h>
 #include <opensync/opensync-data.h>
 #include <opensync/opensync-helper.h>
 #include <opensync/opensync-format.h>
-#include <opensync/opensync-merger.h>
+#include <opensync/opensync-capabilities.h>
 
 /* common parent class and shared code for all KDE Data sources/sinks */
 class OSyncDataSource
