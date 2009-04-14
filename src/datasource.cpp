@@ -1,6 +1,7 @@
 /**
  * @author Andrew Baumann <andrewb@cse.unsw.edu.au>
  * changed to 0.40 API by Martin Koller <kollix@aon.at>
+ * some additional 0.40 API updates by Chris Frey <cdfrey@foursquare.net>
  */
 
 #include <stdlib.h>
@@ -16,7 +17,7 @@ static void connect_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSync
 {
   osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __PRETTY_FUNCTION__, sink, userdata, info, ctx);
   OSyncDataSource *obj = static_cast<OSyncDataSource *>(userdata);
-  obj->connect(info, ctx);
+  obj->connect(sink, info, ctx);
   osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
 
@@ -26,7 +27,7 @@ static void disconnect_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OS
 {
   osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p)", __PRETTY_FUNCTION__, sink, userdata, info, ctx);
   OSyncDataSource *obj = static_cast<OSyncDataSource *>(userdata);
-  obj->disconnect(info, ctx);
+  obj->disconnect(sink, info, ctx);
   osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
 
@@ -37,7 +38,7 @@ static void get_changes_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info,
 {
   osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p)", __PRETTY_FUNCTION__, sink, userdata, info, ctx);
   OSyncDataSource *obj = static_cast<OSyncDataSource *>(userdata);
-  obj->get_changes(info, ctx);
+  obj->get_changes(sink, info, ctx, slow_sync);
   osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
 
@@ -48,7 +49,7 @@ static void commit_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info,
 {
   osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p, %p)", __PRETTY_FUNCTION__, sink, userdata, info, ctx, chg);
   OSyncDataSource *obj = static_cast<OSyncDataSource *>(userdata);
-  obj->commit(info, ctx, chg);
+  obj->commit(sink, info, ctx, chg);
   osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
 
@@ -58,7 +59,7 @@ static void sync_done_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSy
 {
   osync_trace(TRACE_ENTRY, "%s(%p, %p, %p, %p)", __PRETTY_FUNCTION__, sink, userdata, info, ctx);
   OSyncDataSource *obj = static_cast<OSyncDataSource *>(userdata);
-  obj->sync_done(info, ctx);
+  obj->sync_done(sink, info, ctx);
   osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
 
@@ -91,18 +92,8 @@ bool OSyncDataSource::initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSy
   // Request a state_db from the framework.
   osync_objtype_sink_enable_state_db(sink, TRUE);
 
-  const char *configdir = osync_plugin_info_get_configdir(info);
-  QString tablepath = QString("%1/hashtable.db").arg(configdir);
-  hashtable = osync_hashtable_new(QFile::encodeName(tablepath), objtype, error);
-  if ( !hashtable ) {
-    osync_trace(TRACE_EXIT_ERROR, "%s: %s", __PRETTY_FUNCTION__, osync_error_print(error));
-    return false;
-  }
-  if ( !osync_hashtable_load(hashtable, error) )
-  {
-    osync_trace(TRACE_EXIT_ERROR, "%s: %s", __PRETTY_FUNCTION__, osync_error_print(error));
-    return false;
-  }
+  // Request a hashtable from the framework
+  osync_objtype_sink_enable_hashtable(sink, TRUE);
 
   // NOTE: advanced options are per plugin; currently we read the FilterCategory
   // for each Resource (later this could be separated by Resource via a different name, etc.)
@@ -126,7 +117,7 @@ bool OSyncDataSource::initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSy
 
 //--------------------------------------------------------------------------------
 
-void OSyncDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
+void OSyncDataSource::connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx)
 {
   osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, info, ctx);
 
@@ -134,7 +125,6 @@ void OSyncDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
   OSyncError *error = NULL;
   osync_bool statematch = FALSE;
 
-  OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, objtype);
   OSyncSinkStateDB *state_db = osync_objtype_sink_get_state_db(sink);
 
   if ( !osync_sink_state_equal(state_db, "done", "true", &statematch, &error) )
@@ -157,14 +147,13 @@ void OSyncDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
 
 //--------------------------------------------------------------------------------
 
-void OSyncDataSource::sync_done(OSyncPluginInfo *info, OSyncContext *ctx)
+void OSyncDataSource::sync_done(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx)
 {
   osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, info, ctx);
 
   // Detection mechanismn if this is the first sync
   OSyncError *error = NULL;
 
-  OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, objtype);
   OSyncSinkStateDB *state_db = osync_objtype_sink_get_state_db(sink);
 
   if ( !osync_sink_state_set(state_db, "done", "true", &error) )
@@ -176,19 +165,12 @@ void OSyncDataSource::sync_done(OSyncPluginInfo *info, OSyncContext *ctx)
   }
   osync_context_report_success(ctx);
 
-  if ( hashtable && !osync_hashtable_save(hashtable, &error) )
-  {
-    osync_context_report_osyncerror(ctx, error);
-    osync_trace(TRACE_EXIT_ERROR, "%s: %s", __PRETTY_FUNCTION__, osync_error_print(&error));
-    osync_error_unref(&error);
-  }
-
   osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
 
 //--------------------------------------------------------------------------------
 
-bool OSyncDataSource::report_change(OSyncPluginInfo *info, OSyncContext *ctx,
+bool OSyncDataSource::report_change(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx,
                                     QString uid, QString data, QString hash, OSyncObjFormat *objformat)
 {
   osync_trace(TRACE_ENTRY, "%s(%p, %p, %s, (data), (hash), %p)", __PRETTY_FUNCTION__,
@@ -209,6 +191,7 @@ bool OSyncDataSource::report_change(OSyncPluginInfo *info, OSyncContext *ctx,
   osync_change_set_uid(change, uid.utf8());
   osync_change_set_hash(change, hash.utf8());
 
+  OSyncHashTable *hashtable = osync_objtype_sink_get_hashtable(sink);
   OSyncChangeType changetype = osync_hashtable_get_changetype(hashtable, change);
   osync_change_set_changetype(change, changetype);
 
@@ -246,11 +229,12 @@ bool OSyncDataSource::report_change(OSyncPluginInfo *info, OSyncContext *ctx,
 
 //--------------------------------------------------------------------------------
 
-bool OSyncDataSource::report_deleted(OSyncPluginInfo *info, OSyncContext *ctx, OSyncObjFormat *objformat)
+bool OSyncDataSource::report_deleted(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, OSyncObjFormat *objformat)
 {
   osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __PRETTY_FUNCTION__, info, ctx, objformat);
 
   OSyncError *error = NULL;
+  OSyncHashTable *hashtable = osync_objtype_sink_get_hashtable(sink);
   OSyncList *u, *uids  = osync_hashtable_get_deleted(hashtable);
   OSyncChange *change = NULL;
 
@@ -296,8 +280,6 @@ error:
 
 OSyncDataSource::~OSyncDataSource()
 {
-  if (hashtable)
-    osync_hashtable_unref(hashtable);
 }
 
 //--------------------------------------------------------------------------------

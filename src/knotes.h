@@ -57,10 +57,10 @@ class KNotesDataSource : public OSyncDataSource
 		KNotesDataSource() : OSyncDataSource("note") {};
 		virtual ~KNotesDataSource() {};
 
-		virtual void connect(OSyncPluginInfo *info, OSyncContext *ctx);
-		virtual void disconnect(OSyncPluginInfo *info, OSyncContext *ctx);
-		virtual void get_changes(OSyncPluginInfo *info, OSyncContext *ctx);
-		virtual void commit(OSyncPluginInfo *info, OSyncContext *ctx, OSyncChange *chg);
+		virtual void connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx);
+		virtual void disconnect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx);
+		virtual void get_changes(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, osync_bool slow_sync);
+		virtual void commit(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, OSyncChange *chg);
 
 	private:
 		DCOPClient *kn_dcop;

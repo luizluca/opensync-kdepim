@@ -33,10 +33,10 @@ class KContactDataSource : public OSyncDataSource
 		KContactDataSource() : OSyncDataSource("contact"), addressbookptr(0), modified(false), ticket(0) {};
 		virtual ~KContactDataSource() {};
 
-		virtual void connect(OSyncPluginInfo *info, OSyncContext *ctx);
-		virtual void disconnect(OSyncPluginInfo *info, OSyncContext *ctx);
-		virtual void get_changes(OSyncPluginInfo *info, OSyncContext *ctx);
-		virtual void commit(OSyncPluginInfo *info, OSyncContext *ctx, OSyncChange *chg);
+		virtual void connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx);
+		virtual void disconnect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx);
+		virtual void get_changes(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, osync_bool slow_sync);
+		virtual void commit(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, OSyncChange *chg);
 
 	private:
 		QString calc_hash(KABC::Addressee &e);

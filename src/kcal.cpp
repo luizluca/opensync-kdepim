@@ -175,7 +175,9 @@ bool KCalSharedResource::commit(OSyncDataSource *dsobj, OSyncContext *ctx, OSync
  * This function exists because the logic for converting the events or to-dos
  * is the same, only the objtype and format is different.
  */
-bool KCalSharedResource::report_incidence(OSyncDataSource *dsobj, OSyncPluginInfo *info, OSyncContext *ctx,
+bool KCalSharedResource::report_incidence(OSyncDataSource *dsobj,
+                                          OSyncObjTypeSink *sink,
+                                          OSyncPluginInfo *info, OSyncContext *ctx,
                                           KCal::Incidence *e, OSyncObjFormat *objformat)
 {
 	/* Build a local calendar for the incidence data */
@@ -186,12 +188,12 @@ bool KCalSharedResource::report_incidence(OSyncDataSource *dsobj, OSyncPluginInf
 	KCal::ICalFormat format;
 	QString data = format.toString(&cal);
 
-	return dsobj->report_change(info, ctx, e->uid(), data, calc_hash(e), objformat);
+	return dsobj->report_change(sink, info, ctx, e->uid(), data, calc_hash(e), objformat);
 }
 
 //--------------------------------------------------------------------------------
 
-bool KCalSharedResource::get_event_changes(OSyncDataSource *dsobj, OSyncPluginInfo *info, OSyncContext *ctx)
+bool KCalSharedResource::get_event_changes(OSyncDataSource *dsobj, OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx)
 {
 	OSyncFormatEnv *formatenv = osync_plugin_info_get_format_env(info);
 	OSyncObjFormat *objformat = osync_format_env_find_objformat(formatenv, "vevent20");
@@ -210,7 +212,7 @@ bool KCalSharedResource::get_event_changes(OSyncDataSource *dsobj, OSyncPluginIn
 		if ( (*i)->uid().contains("KABC_Birthday") || (*i)->uid().contains("KABC_Anniversary") )
 			continue;
 
-		if (!report_incidence(dsobj, info, ctx, *i, objformat))
+		if (!report_incidence(dsobj, sink, info, ctx, *i, objformat))
 			return false;
 	}
 
@@ -219,7 +221,7 @@ bool KCalSharedResource::get_event_changes(OSyncDataSource *dsobj, OSyncPluginIn
 
 //--------------------------------------------------------------------------------
 
-bool KCalSharedResource::get_todo_changes(OSyncDataSource *dsobj, OSyncPluginInfo *info, OSyncContext *ctx)
+bool KCalSharedResource::get_todo_changes(OSyncDataSource *dsobj, OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx)
 {
 	OSyncFormatEnv *formatenv = osync_plugin_info_get_format_env(info);
 	OSyncObjFormat *objformat = osync_format_env_find_objformat(formatenv, "vtodo20");
@@ -230,7 +232,7 @@ bool KCalSharedResource::get_todo_changes(OSyncDataSource *dsobj, OSyncPluginInf
 		if ( ! dsobj->has_category((*i)->categories()) )
 			continue;
 
-		if (!report_incidence(dsobj, info, ctx, *i, objformat))
+		if (!report_incidence(dsobj, sink, info, ctx, *i, objformat))
 			return false;
 	}
 
@@ -239,23 +241,23 @@ bool KCalSharedResource::get_todo_changes(OSyncDataSource *dsobj, OSyncPluginInf
 
 //--------------------------------------------------------------------------------
 
-void KCalEventDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
+void KCalEventDataSource::connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx)
 {
 	if (kcal->open(ctx))
-          OSyncDataSource::connect(info, ctx);
+          OSyncDataSource::connect(sink, info, ctx);
 }
 
 //--------------------------------------------------------------------------------
 
-void KCalTodoDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
+void KCalTodoDataSource::connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx)
 {
 	if (kcal->open(ctx))
-		OSyncDataSource::connect(info, ctx);
+		OSyncDataSource::connect(sink, info, ctx);
 }
 
 //--------------------------------------------------------------------------------
 
-void KCalEventDataSource::disconnect(OSyncPluginInfo *, OSyncContext *ctx)
+void KCalEventDataSource::disconnect(OSyncObjTypeSink *sink, OSyncPluginInfo *, OSyncContext *ctx)
 {
 	if (kcal->close(ctx))
 		osync_context_report_success(ctx);
@@ -263,7 +265,7 @@ void KCalEventDataSource::disconnect(OSyncPluginInfo *, OSyncContext *ctx)
 
 //--------------------------------------------------------------------------------
 
-void KCalTodoDataSource::disconnect(OSyncPluginInfo *, OSyncContext *ctx)
+void KCalTodoDataSource::disconnect(OSyncObjTypeSink *sink, OSyncPluginInfo *, OSyncContext *ctx)
 {
 	if (kcal->close(ctx))
 		osync_context_report_success(ctx);
@@ -271,15 +273,14 @@ void KCalTodoDataSource::disconnect(OSyncPluginInfo *, OSyncContext *ctx)
 
 //--------------------------------------------------------------------------------
 
-void KCalEventDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
+void KCalEventDataSource::get_changes(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, osync_bool slow_sync)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, info, ctx);
 
 	OSyncError *error = NULL;
+	OSyncHashTable *hashtable = osync_objtype_sink_get_hashtable(sink);
 
-	OSyncObjTypeSink *sink = osync_plugin_info_get_sink(info);
-
-	if (osync_objtype_sink_get_slowsync(sink)) {
+	if (slow_sync) {
 		osync_trace(TRACE_INTERNAL, "Got slow-sync, resetting hashtable");
 		if (!osync_hashtable_slowsync(hashtable, &error)) {
 			osync_context_report_osyncerror(ctx, error);
@@ -288,7 +289,7 @@ void KCalEventDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
 		}
 	}
 
-	if (!kcal->get_event_changes(this, info, ctx)) {
+	if (!kcal->get_event_changes(this, sink, info, ctx)) {
 		osync_context_report_error(ctx, OSYNC_ERROR_GENERIC, "Error while reciving latest changes.");
 		osync_trace(TRACE_EXIT_ERROR, "%s: error in get_todo_changes", __PRETTY_FUNCTION__);
 		return;
@@ -297,7 +298,7 @@ void KCalEventDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
 	OSyncFormatEnv *formatenv = osync_plugin_info_get_format_env(info);
 	OSyncObjFormat *objformat = osync_format_env_find_objformat(formatenv, "vevent20");
 
-	if (!report_deleted(info, ctx, objformat)) {
+	if (!report_deleted(sink, info, ctx, objformat)) {
 		osync_context_report_error(ctx, OSYNC_ERROR_GENERIC, "Error while detecting latest changes.");
 		osync_trace(TRACE_EXIT_ERROR, "%s", __PRETTY_FUNCTION__);
 		return;
@@ -309,18 +310,17 @@ void KCalEventDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
 
 //--------------------------------------------------------------------------------
 
-void KCalTodoDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
+void KCalTodoDataSource::get_changes(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, osync_bool slow_sync)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, info, ctx);
 
 	OSyncError *error = NULL;
 
-	OSyncObjTypeSink *sink = osync_plugin_info_get_sink(info);
-
 	OSyncFormatEnv *formatenv = osync_plugin_info_get_format_env(info);
 	OSyncObjFormat *objformat = osync_format_env_find_objformat(formatenv, "vtodo20");
+	OSyncHashTable *hashtable = osync_objtype_sink_get_hashtable(sink);
 
-	if (osync_objtype_sink_get_slowsync(sink)) {
+	if (slow_sync) {
 		osync_trace(TRACE_INTERNAL, "Got slow-sync");
 		if (!osync_hashtable_slowsync(hashtable, &error)) {
 			osync_context_report_osyncerror(ctx, error);
@@ -330,13 +330,13 @@ void KCalTodoDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
 
 	}
 
-	if (!kcal->get_todo_changes(this, info, ctx)) {
+	if (!kcal->get_todo_changes(this, sink, info, ctx)) {
 		osync_trace(TRACE_EXIT_ERROR, "%s: error in get_todo_changes", __PRETTY_FUNCTION__);
 		osync_context_report_error(ctx, OSYNC_ERROR_GENERIC, "Error while detecting latest changes.");
 		return;
 	}
 
-	if (!report_deleted(info, ctx, objformat)) {
+	if (!report_deleted(sink, info, ctx, objformat)) {
 		osync_trace(TRACE_EXIT_ERROR, "%s", __PRETTY_FUNCTION__);
 		osync_context_report_error(ctx, OSYNC_ERROR_GENERIC, "Error while detecting deleted entries.");
 		return;
@@ -348,24 +348,26 @@ void KCalTodoDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
 
 //--------------------------------------------------------------------------------
 
-void KCalEventDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChange *chg)
+void KCalEventDataSource::commit(OSyncObjTypeSink *sink, OSyncPluginInfo *, OSyncContext *ctx, OSyncChange *chg)
 {
 	// We use the same function for events and to-do
 	if (!kcal->commit(this, ctx, chg))
 		return;
 
+	OSyncHashTable *hashtable = osync_objtype_sink_get_hashtable(sink);
 	osync_hashtable_update_change(hashtable, chg);
 	osync_context_report_success(ctx);
 }
 
 //--------------------------------------------------------------------------------
 
-void KCalTodoDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChange *chg)
+void KCalTodoDataSource::commit(OSyncObjTypeSink *sink, OSyncPluginInfo *, OSyncContext *ctx, OSyncChange *chg)
 {
 	// We use the same function for calendar and to-do
 	if (!kcal->commit(this, ctx, chg))
 		return;
 
+	OSyncHashTable *hashtable = osync_objtype_sink_get_hashtable(sink);
 	osync_hashtable_update_change(hashtable, chg);
 	osync_context_report_success(ctx);
 }

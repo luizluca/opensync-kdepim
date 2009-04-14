@@ -54,7 +54,7 @@ QString KContactDataSource::calc_hash(KABC::Addressee &e)
 
 //--------------------------------------------------------------------------------
 
-void KContactDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
+void KContactDataSource::connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, info, ctx);
 
@@ -70,14 +70,14 @@ void KContactDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
 		return;
 	}
 
-	OSyncDataSource::connect(info, ctx);
+	OSyncDataSource::connect(sink, info, ctx);
 
 	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
 
 //--------------------------------------------------------------------------------
 
-void KContactDataSource::disconnect(OSyncPluginInfo *info, OSyncContext *ctx)
+void KContactDataSource::disconnect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, info, ctx);
 
@@ -101,15 +101,14 @@ void KContactDataSource::disconnect(OSyncPluginInfo *info, OSyncContext *ctx)
 
 //--------------------------------------------------------------------------------
 
-void KContactDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
+void KContactDataSource::get_changes(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, osync_bool slow_sync)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, info, ctx);
 
 	OSyncError *error = NULL;
+	OSyncHashTable *hashtable = osync_objtype_sink_get_hashtable(sink);
 
-	OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, objtype);
-
-	if (osync_objtype_sink_get_slowsync(sink)) {
+	if (slow_sync) {
 		osync_trace(TRACE_INTERNAL, "Got slow-sync, resetting hashtable");
 		if (!osync_hashtable_slowsync(hashtable, &error)) {
 			osync_context_report_osyncerror(ctx, error);
@@ -132,7 +131,7 @@ void KContactDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
 		// only vcard3.0 exports Categories
 		QString data = converter.createVCard(*it, KABC::VCardConverter::v3_0);
 
-		if (!report_change(info, ctx, it->uid(), data, calc_hash(*it), objformat)) {
+		if (!report_change(sink, info, ctx, it->uid(), data, calc_hash(*it), objformat)) {
 
 			osync_context_report_error(ctx, OSYNC_ERROR_GENERIC, "Failed to get changes");
 			osync_trace(TRACE_EXIT_ERROR, "%s", __PRETTY_FUNCTION__);
@@ -140,7 +139,7 @@ void KContactDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
 		}
 	}
 
-	if (!report_deleted(info, ctx, objformat)) {
+	if (!report_deleted(sink, info, ctx, objformat)) {
 		osync_context_report_error(ctx, OSYNC_ERROR_GENERIC, "Failed detecting deleted changes.");
 		osync_trace(TRACE_EXIT_ERROR, "%s", __PRETTY_FUNCTION__);
 		return;
@@ -152,7 +151,7 @@ void KContactDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
 
 //--------------------------------------------------------------------------------
 
-void KContactDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChange *chg)
+void KContactDataSource::commit(OSyncObjTypeSink *sink, OSyncPluginInfo *, OSyncContext *ctx, OSyncChange *chg)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, ctx, chg);
 	KABC::VCardConverter converter;
@@ -224,6 +223,7 @@ void KContactDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChang
 		}
 	}
 
+	OSyncHashTable *hashtable = osync_objtype_sink_get_hashtable(sink);
 	osync_hashtable_update_change(hashtable, chg);
 
 	osync_context_report_success(ctx);

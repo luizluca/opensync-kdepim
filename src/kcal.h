@@ -35,15 +35,15 @@ class KCalSharedResource
 		KCalSharedResource() : calendar(0), refcount(0) { }
 		bool open(OSyncContext *ctx);
 		bool close(OSyncContext *ctx);
-		bool get_event_changes(OSyncDataSource *dsobj, OSyncPluginInfo *info, OSyncContext *ctx);
-		bool get_todo_changes(OSyncDataSource *dsobj, OSyncPluginInfo *info, OSyncContext *ctx);
+		bool get_event_changes(OSyncDataSource *dsobj, OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx);
+		bool get_todo_changes(OSyncDataSource *dsobj, OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx);
 		bool commit(OSyncDataSource *dsobj, OSyncContext *ctx, OSyncChange *chg);
 
 	private:
 		KCal::CalendarResources *calendar;
 		int refcount;
 
-		bool report_incidence(OSyncDataSource *dsobj, OSyncPluginInfo *info, OSyncContext *ctx,
+		bool report_incidence(OSyncDataSource *dsobj, OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx,
                                       KCal::Incidence *e, OSyncObjFormat *objformat);
 };
 
@@ -55,10 +55,10 @@ class KCalEventDataSource : public OSyncDataSource
 		KCalEventDataSource(KCalSharedResource *kcal) : OSyncDataSource("event"), kcal(kcal) {};
 		virtual ~KCalEventDataSource() {};
 
-		virtual void connect(OSyncPluginInfo *info, OSyncContext *ctx);
-		virtual void disconnect(OSyncPluginInfo *info, OSyncContext *ctx);
-		virtual void get_changes(OSyncPluginInfo *info, OSyncContext *ctx);
-		virtual void commit(OSyncPluginInfo *info, OSyncContext *ctx, OSyncChange *chg);
+		virtual void connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx);
+		virtual void disconnect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx);
+		virtual void get_changes(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, osync_bool slow_sync);
+		virtual void commit(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, OSyncChange *chg);
 
 	private:
 		KCalSharedResource *kcal;
@@ -72,10 +72,10 @@ class KCalTodoDataSource : public OSyncDataSource
 		KCalTodoDataSource(KCalSharedResource *kcal) : OSyncDataSource("todo"), kcal(kcal) {};
 		virtual ~KCalTodoDataSource() {};
 
-		virtual void connect(OSyncPluginInfo *info, OSyncContext *ctx);
-		virtual void disconnect(OSyncPluginInfo *info, OSyncContext *ctx);
-		virtual void get_changes(OSyncPluginInfo *info, OSyncContext *ctx);
-		virtual void commit(OSyncPluginInfo *info, OSyncContext *ctx, OSyncChange *chg);
+		virtual void connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx);
+		virtual void disconnect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx);
+		virtual void get_changes(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, osync_bool slow_sync);
+		virtual void commit(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, OSyncChange *chg);
 
 	private:
 		KCalSharedResource *kcal;

@@ -36,7 +36,7 @@ SOFTWARE IS DISCLAIMED.
 
 //--------------------------------------------------------------------------------
 
-void KNotesDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
+void KNotesDataSource::connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, info, ctx);
 
@@ -68,14 +68,14 @@ void KNotesDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
 
 	kn_iface = new KNotesIface_stub("knotes", "KNotesIface");
 
-	OSyncDataSource::connect(info, ctx);
+	OSyncDataSource::connect(sink, info, ctx);
 	
 	osync_trace(TRACE_EXIT, "%s", __PRETTY_FUNCTION__);
 }
 
 //--------------------------------------------------------------------------------
 
-void KNotesDataSource::disconnect(OSyncPluginInfo *, OSyncContext *ctx)
+void KNotesDataSource::disconnect(OSyncObjTypeSink *sink, OSyncPluginInfo *, OSyncContext *ctx)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p)", __func__, ctx);
 
@@ -125,7 +125,7 @@ static QString strip_html(QString input)
 
 //--------------------------------------------------------------------------------
 
-void KNotesDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
+void KNotesDataSource::get_changes(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx, osync_bool slow_sync)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p)", __func__, ctx);
 	QMap <KNoteID_t,QString> fNotes;
@@ -139,8 +139,8 @@ void KNotesDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
 		return;
 	}
 
-	OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, objtype);
-	if (osync_objtype_sink_get_slowsync(sink)) {
+	OSyncHashTable *hashtable = osync_objtype_sink_get_hashtable(sink);
+	if (slow_sync) {
 		osync_trace(TRACE_INTERNAL, "Got slow-sync, resetting hashtable");
 		if (!osync_hashtable_slowsync(hashtable, &error)) {
 			osync_context_report_osyncerror(ctx, error);
@@ -161,7 +161,7 @@ void KNotesDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
 		hash_value.update(data.utf8());
 		QString hash = hash_value.base64Digest();
 
-		if ( !report_change(info, ctx, uid, data, hash, objformat) ) {
+		if ( !report_change(sink, info, ctx, uid, data, hash, objformat) ) {
 			osync_context_report_error(ctx, OSYNC_ERROR_GENERIC, "Failed to get changes");
 			osync_trace(TRACE_EXIT_ERROR, "%s", __PRETTY_FUNCTION__);
 			return;
@@ -170,7 +170,7 @@ void KNotesDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
 		hash_value.reset();
 	}
 
-	if (!report_deleted(info, ctx, objformat)) {
+	if (!report_deleted(sink, info, ctx, objformat)) {
 		osync_context_report_error(ctx, OSYNC_ERROR_GENERIC, "Failed detecting deleted changes.");
 		osync_trace(TRACE_EXIT_ERROR, "%s", __func__);
 		return;
@@ -182,7 +182,7 @@ void KNotesDataSource::get_changes(OSyncPluginInfo *info, OSyncContext *ctx)
 
 //--------------------------------------------------------------------------------
 
-void KNotesDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChange *chg)
+void KNotesDataSource::commit(OSyncObjTypeSink *sink, OSyncPluginInfo *, OSyncContext *ctx, OSyncChange *chg)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __func__, ctx, chg);
 	OSyncChangeType type = osync_change_get_changetype(chg);
@@ -258,6 +258,7 @@ void KNotesDataSource::commit(OSyncPluginInfo *, OSyncContext *ctx, OSyncChange 
 		}*/
 	}
 
+	OSyncHashTable *hashtable = osync_objtype_sink_get_hashtable(sink);
 	osync_hashtable_update_change(hashtable, chg);
 	osync_context_report_success(ctx);
 	osync_trace(TRACE_EXIT, "%s", __func__);
