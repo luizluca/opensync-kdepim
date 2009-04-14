@@ -148,7 +148,7 @@ void OSyncDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
   if ( !statematch )
   {
     osync_trace(TRACE_INTERNAL, "Setting slow-sync for %s", objtype);
-    osync_objtype_sink_set_slowsync(sink, TRUE);
+    osync_context_report_slowsync(ctx);
   }
   osync_context_report_success(ctx);
 
