@@ -88,8 +88,8 @@ bool OSyncDataSource::initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSy
 
   osync_objtype_sink_set_userdata(sink, this);
 
-  // Request an anchor from the framework.
-  osync_objtype_sink_enable_anchor(sink, TRUE);
+  // Request a state_db from the framework.
+  osync_objtype_sink_enable_state_db(sink, TRUE);
 
   const char *configdir = osync_plugin_info_get_configdir(info);
   QString tablepath = QString("%1/hashtable.db").arg(configdir);
@@ -132,12 +132,12 @@ void OSyncDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
 
   // Detection mechanismn if this is the first sync
   OSyncError *error = NULL;
-  osync_bool anchormatch = FALSE;
+  osync_bool statematch = FALSE;
 
   OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, objtype);
-  OSyncAnchor *anchor = osync_objtype_sink_get_anchor(sink);
+  OSyncSinkStateDB *state_db = osync_objtype_sink_get_state_db(sink);
 
-  if ( !osync_anchor_compare(anchor, "true", &anchormatch, &error) )
+  if ( !osync_sink_state_equal(state_db, "done", "true", &statematch, &error) )
   {
     osync_context_report_osyncerror(ctx, error);
     osync_trace(TRACE_EXIT_ERROR, "%s: %s", __PRETTY_FUNCTION__, osync_error_print(&error));
@@ -145,7 +145,7 @@ void OSyncDataSource::connect(OSyncPluginInfo *info, OSyncContext *ctx)
     return;
   }
 
-  if ( !anchormatch )
+  if ( !statematch )
   {
     osync_trace(TRACE_INTERNAL, "Setting slow-sync for %s", objtype);
     osync_objtype_sink_set_slowsync(sink, TRUE);
@@ -165,9 +165,9 @@ void OSyncDataSource::sync_done(OSyncPluginInfo *info, OSyncContext *ctx)
   OSyncError *error = NULL;
 
   OSyncObjTypeSink *sink = osync_plugin_info_find_objtype(info, objtype);
-  OSyncAnchor *anchor = osync_objtype_sink_get_anchor(sink);
+  OSyncSinkStateDB *state_db = osync_objtype_sink_get_state_db(sink);
 
-  if ( !osync_anchor_update(anchor, "true", &error) )
+  if ( !osync_sink_state_set(state_db, "done", "true", &error) )
   {
     osync_context_report_osyncerror(ctx, error);
     osync_trace(TRACE_EXIT_ERROR, "%s: %s", __PRETTY_FUNCTION__, osync_error_print(&error));
