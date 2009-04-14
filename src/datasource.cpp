@@ -80,15 +80,13 @@ bool OSyncDataSource::initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSy
     return true;
   }
 
-  OSyncObjTypeSinkFunctions functions;
-  memset(&functions, 0, sizeof(functions));
-  functions.connect     = connect_wrapper;
-  functions.disconnect  = disconnect_wrapper;
-  functions.get_changes = get_changes_wrapper;
-  functions.commit      = commit_wrapper;
-  functions.sync_done   = sync_done_wrapper;
+  osync_objtype_sink_set_connect_func(sink, connect_wrapper);
+  osync_objtype_sink_set_disconnect_func(sink, disconnect_wrapper);
+  osync_objtype_sink_set_get_changes_func(sink, get_changes_wrapper);
+  osync_objtype_sink_set_commit_func(sink, commit_wrapper);
+  osync_objtype_sink_set_sync_done_func(sink, sync_done_wrapper);
 
-  osync_objtype_sink_set_functions(sink, functions, this);
+  osync_objtype_sink_set_userdata(sink, this);
 
   // Request an anchor from the framework.
   osync_objtype_sink_enable_anchor(sink, TRUE);
