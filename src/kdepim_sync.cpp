@@ -154,6 +154,7 @@ osync_bool kde_discover(OSyncPluginInfo *info, void *userdata, OSyncError **erro
 		OSyncObjTypeSink *sink = (OSyncObjTypeSink *) l->data;
 		osync_objtype_sink_set_available(sink, TRUE);
 	}
+	osync_list_free(list);
 
         // set information about the peer (KDE itself)
         {
