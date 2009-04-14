@@ -146,11 +146,14 @@ void *kde_initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncError **er
 
 osync_bool kde_discover(OSyncPluginInfo *info, void *userdata, OSyncError **error)
 {
+	OSyncList *l, *list = NULL;
 	osync_trace(TRACE_ENTRY, "%s(%p, %p, %p)", __func__, userdata, info, error);
 
-	int num_objtypes = osync_plugin_info_num_objtypes(info);
-	for (int n = 0; n < num_objtypes; n++)
-		osync_objtype_sink_set_available(osync_plugin_info_nth_objtype(info, n), TRUE);
+	list = osync_plugin_info_get_objtype_sinks(info);
+	for (l=list; l; l = l->next) {
+		OSyncObjTypeSink *sink = (OSyncObjTypeSink *) l->data;
+		osync_objtype_sink_set_available(sink, TRUE);
+	}
 
         // set information about the peer (KDE itself)
         {
