@@ -77,7 +77,7 @@ void KContactDataSource::connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, 
 
 //--------------------------------------------------------------------------------
 
-void KContactDataSource::disconnect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSyncContext *ctx)
+void KContactDataSource::disconnect(OSyncObjTypeSink *, OSyncPluginInfo *info, OSyncContext *ctx)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, info, ctx);
 

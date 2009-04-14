@@ -75,7 +75,7 @@ void KNotesDataSource::connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OS
 
 //--------------------------------------------------------------------------------
 
-void KNotesDataSource::disconnect(OSyncObjTypeSink *sink, OSyncPluginInfo *, OSyncContext *ctx)
+void KNotesDataSource::disconnect(OSyncObjTypeSink *, OSyncPluginInfo *, OSyncContext *ctx)
 {
 	osync_trace(TRACE_ENTRY, "%s(%p)", __func__, ctx);
 

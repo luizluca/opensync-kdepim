@@ -257,7 +257,7 @@ void KCalTodoDataSource::connect(OSyncObjTypeSink *sink, OSyncPluginInfo *info, 
 
 //--------------------------------------------------------------------------------
 
-void KCalEventDataSource::disconnect(OSyncObjTypeSink *sink, OSyncPluginInfo *, OSyncContext *ctx)
+void KCalEventDataSource::disconnect(OSyncObjTypeSink *, OSyncPluginInfo *, OSyncContext *ctx)
 {
 	if (kcal->close(ctx))
 		osync_context_report_success(ctx);
@@ -265,7 +265,7 @@ void KCalEventDataSource::disconnect(OSyncObjTypeSink *sink, OSyncPluginInfo *, 
 
 //--------------------------------------------------------------------------------
 
-void KCalTodoDataSource::disconnect(OSyncObjTypeSink *sink, OSyncPluginInfo *, OSyncContext *ctx)
+void KCalTodoDataSource::disconnect(OSyncObjTypeSink *, OSyncPluginInfo *, OSyncContext *ctx)
 {
 	if (kcal->close(ctx))
 		osync_context_report_success(ctx);

@@ -68,7 +68,7 @@ static void sync_done_wrapper(OSyncObjTypeSink *sink, OSyncPluginInfo *info, OSy
 //--------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------
 
-bool OSyncDataSource::initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncError **error)
+bool OSyncDataSource::initialize(OSyncPlugin *plugin, OSyncPluginInfo *info, OSyncError **)
 {
   osync_trace(TRACE_ENTRY, "%s(%p, %p)", __PRETTY_FUNCTION__, plugin, info);
 
