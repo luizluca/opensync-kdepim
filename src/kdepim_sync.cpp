@@ -203,7 +203,9 @@ osync_bool get_sync_info(OSyncPluginEnv *env, OSyncError **error)
 	osync_plugin_set_finalize(plugin, kde_finalize);
 	osync_plugin_set_discover(plugin, kde_discover);
 
-	osync_plugin_env_register_plugin(env, plugin);
+	if (!osync_plugin_env_register_plugin(env, plugin, error))
+		goto error;
+
 	osync_plugin_unref(plugin);
 
 	osync_trace(TRACE_EXIT, "%s", __func__);
