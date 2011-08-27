@@ -199,9 +199,9 @@ osync_bool get_sync_info(OSyncPluginEnv *env, OSyncError **error)
 	osync_plugin_set_config_type(plugin, OSYNC_PLUGIN_OPTIONAL_CONFIGURATION);
 	osync_plugin_set_start_type(plugin, OSYNC_START_TYPE_PROCESS);
 
-	osync_plugin_set_initialize(plugin, kde_initialize);
-	osync_plugin_set_finalize(plugin, kde_finalize);
-	osync_plugin_set_discover(plugin, kde_discover);
+	osync_plugin_set_initialize_func(plugin, kde_initialize);
+	osync_plugin_set_finalize_func(plugin, kde_finalize);
+	osync_plugin_set_discover_func(plugin, kde_discover);
 
 	if (!osync_plugin_env_register_plugin(env, plugin, error))
 		goto error;
